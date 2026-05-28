@@ -147,16 +147,21 @@ export const useHoard = create(
 
         if (action === "open") { window.open(item.url, "_blank"); return; }
 
+        const undoAction = { label: "Undo", onClick: () => get().undo() };
+
         if (action === "delete") {
           undoStack.push({ type: "delete", item, index: state.items.indexOf(item) });
           set({ items: state.items.filter((i) => i.id !== item.id), selId: nextId, status: "Tossed. Press u to undo." });
+          toast("Tossed", { action: undoAction });
         } else {
           undoStack.push({ type: "state", id: item.id, prevState: item.state });
           set({
             items: state.items.map((i) => (i.id === item.id ? { ...i, state: action } : i)),
             selId: nextId,
-            status: `${action === "later" ? "Saved for later" : "Archived"}. Press u to undo.`,
+            status: `${action === "later" ? "Saved for later" : action === "archived" ? "Archived" : "Moved to inbox"}. Press u to undo.`,
           });
+          const label = action === "later" ? "Saved for later" : action === "archived" ? "Archived" : "Moved to inbox";
+          toast(label, { action: undoAction });
         }
       },
 
