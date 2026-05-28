@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Cloud, LogOut } from "lucide-react";
+import { Cloud, LogOut, User } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
 
 export default function AuthControl({ session }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e) { if (!e.target.closest(".auth")) setOpen(false); }
+    document.addEventListener("click", onDoc);
+    return () => document.removeEventListener("click", onDoc);
+  }, [open]);
 
   if (!supabase) return null; // sync not configured
 
@@ -32,8 +39,22 @@ export default function AuthControl({ session }) {
   if (session) {
     return (
       <div className="auth">
-        <span className="auth-email" title={session.user.email}>{session.user.email}</span>
-        <button className="btn-ghost icon-btn" onClick={() => supabase.auth.signOut()}><LogOut size={15} /> Sign out</button>
+        <button
+          className="btn-ghost icon-btn auth-trigger"
+          title={session.user.email}
+          onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        >
+          <User size={15} />
+        </button>
+        {open && (
+          <div className="menu show auth-menu" onClick={(e) => e.stopPropagation()}>
+            <div className="auth-email" title={session.user.email}>{session.user.email}</div>
+            <div className="sep" />
+            <button onClick={() => { setOpen(false); supabase.auth.signOut(); }}>
+              <LogOut size={15} /> Sign out
+            </button>
+          </div>
+        )}
       </div>
     );
   }

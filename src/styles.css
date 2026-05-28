@@ -270,6 +270,22 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.auth-trigger {
+  padding: 7px 9px;
+  display: inline-grid;
+  place-items: center;
+}
+.auth-menu {
+  left: auto;
+  right: 0;
+  min-width: 200px;
+}
+.auth-menu .auth-email {
+  padding: 9px 11px 6px;
+  max-width: none;
+  font-weight: 600;
+  color: var(--ink);
+}
 .auth-form {
   left: auto;
   right: 0;
