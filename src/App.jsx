@@ -10,6 +10,7 @@ import TagEditor from "./components/TagEditor.jsx";
 import AuthControl from "./components/AuthControl.jsx";
 import CommandPalette from "./components/CommandPalette.jsx";
 import SearchBox from "./components/SearchBox.jsx";
+import ThemeToggle from "./components/ThemeToggle.jsx";
 import { useHoard, selectVisible, parseQuery, matchesItem, SECTIONS } from "./store.js";
 import { initSync } from "./lib/sync.js";
 
@@ -220,6 +221,7 @@ export default function App() {
           >
             <Keyboard size={15} />
           </button>
+          <ThemeToggle />
           <AuthControl session={session} />
           <div className="export-wrap">
             <button className="btn-ghost icon-btn" title="Export current view"
