@@ -3,6 +3,7 @@ import { Toaster, toast } from "sonner";
 import {
   ChevronLeft, Download, Upload, Copy, FileText, Braces,
   Layers, Inbox, Clock, Archive, PanelLeft,
+  Keyboard, Plus, X,
 } from "lucide-react";
 import Row from "./components/Row.jsx";
 import TagEditor from "./components/TagEditor.jsx";
@@ -35,6 +36,8 @@ export default function App() {
   const searchRef = useRef(null);
   const [session, setSession] = useState(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
 
   // auth + cross-device sync (no-op if Supabase env isn't configured)
   useEffect(() => initSync(setSession), []);
@@ -110,10 +113,23 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Escape closes the help / deposit overlays (local state isn't visible to the global handler above)
+  useEffect(() => {
+    if (!helpOpen && !depositOpen) return;
+    function onKey(e) {
+      if (e.key !== "Escape") return;
+      if (helpOpen) setHelpOpen(false);
+      if (depositOpen) setDepositOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [helpOpen, depositOpen]);
+
   function fileFromTextarea() {
     const text = textareaRef.current?.value || "";
     useHoard.getState().addUrls(text);
     if (textareaRef.current) textareaRef.current.value = "";
+    setDepositOpen(false);
   }
   function onTextareaKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); fileFromTextarea(); }
@@ -196,6 +212,14 @@ export default function App() {
               </span>
             ))}
           </div>
+          <button
+            className="btn-ghost icon-btn legend-trigger"
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts"
+            onClick={() => setHelpOpen(true)}
+          >
+            <Keyboard size={15} />
+          </button>
           <AuthControl session={session} />
           <div className="export-wrap">
             <button className="btn-ghost icon-btn" title="Export current view"
@@ -217,8 +241,17 @@ export default function App() {
       </header>
 
       <main>
-        <aside className="left">
-          <div className="panel-head">Deposit links</div>
+        <aside className={"left" + (depositOpen ? " sheet-open" : "")}>
+          <div className="panel-head">
+            Deposit links
+            <button
+              className="sheet-close"
+              aria-label="Close"
+              onClick={() => setDepositOpen(false)}
+            >
+              <X size={18} />
+            </button>
+          </div>
           <div className="panel-note">
             Paste URLs — one per line, or any text with links in it. <kbd>⌘</kbd>+<kbd>↵</kbd> to file.
           </div>
@@ -323,6 +356,45 @@ export default function App() {
           onRunItem={(i) => { window.open(i.url, "_blank"); useHoard.getState().setSelId(i.id); }}
           onClose={() => setPaletteOpen(false)}
         />
+      )}
+
+      <button
+        className={"deposit-fab" + (depositOpen ? " hidden" : "")}
+        aria-label="Add links"
+        onClick={() => setDepositOpen(true)}
+      >
+        <Plus size={22} strokeWidth={2.4} />
+      </button>
+
+      {depositOpen && (
+        <div className="sheet-backdrop" onClick={() => setDepositOpen(false)} />
+      )}
+
+      {helpOpen && (
+        <div className="help-backdrop" onClick={() => setHelpOpen(false)}>
+          <div className="help-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Keyboard shortcuts">
+            <div className="help-head">
+              <span>Keyboard shortcuts</span>
+              <button
+                className="help-close"
+                aria-label="Close"
+                onClick={() => setHelpOpen(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="help-list">
+              {KEYS.map((p) => (
+                <div className="help-row" key={p.lab}>
+                  <div className="help-keys">
+                    {p.k.map((k) => <kbd key={k}>{k}</kbd>)}
+                  </div>
+                  <div className="help-lab">{p.lab}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       <Toaster position="bottom-center" theme="dark" toastOptions={{ style: { fontFamily: "var(--sans)" } }} />

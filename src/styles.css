@@ -61,6 +61,7 @@ header {
   box-shadow: var(--shadow-sm);
 }
 .legend .lab { font-size: 11px; color: var(--muted); font-weight: 500; }
+.legend-trigger.icon-btn { display: none; padding: 7px 9px; }
 kbd {
   font-family: var(--mono);
   font-size: 10.5px;
@@ -166,7 +167,26 @@ body.folded .left {
   gap: 14px;
   min-height: 0;
 }
-.panel-head { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.panel-head {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sheet-close {
+  display: none;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 5px;
+  cursor: pointer;
+}
+.sheet-close:hover { background: var(--surface-2); color: var(--ink); }
 .panel-note { font-size: 12.5px; color: var(--muted); margin-top: -8px; }
 .panel-note kbd { vertical-align: middle; }
 textarea {
@@ -721,6 +741,188 @@ header, .left, .right { animation: fade .45s ease both; }
 .cmdk-url { color: var(--muted); font-family: var(--mono); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .cmdk-empty { padding: 18px; color: var(--faint); font-size: 13px; text-align: center; }
 
+/* ---------- deposit FAB + sheet backdrop (mobile-only display) ---------- */
+.deposit-fab {
+  position: fixed;
+  right: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 30;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent-2);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 8px 24px rgba(47, 107, 255, .35);
+  cursor: pointer;
+}
+.deposit-fab:hover { background: var(--accent-2); }
+.deposit-fab:active { transform: translateY(1px); }
+.deposit-fab.hidden { display: none; }
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  background: rgba(20,22,26,.32);
+  backdrop-filter: blur(2px);
+  display: none;
+  animation: fade .14s ease both;
+}
+
+/* ---------- keyboard shortcuts dialog ---------- */
+.help-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  background: rgba(20,22,26,.32);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fade .14s ease both;
+}
+.help-modal {
+  width: 360px;
+  max-width: 100%;
+  max-height: 80vh;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.help-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-2);
+}
+.help-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 5px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.help-close:hover { background: var(--surface-2); color: var(--ink); }
+.help-list { display: flex; flex-direction: column; padding: 8px; overflow-y: auto; }
+.help-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 8px;
+}
+.help-row + .help-row { border-top: 1px solid var(--border-2); }
+.help-keys { display: inline-flex; gap: 4px; }
+.help-lab { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+/* ---------- responsive: mobile (≤760px) ---------- */
 @media (max-width: 760px) {
-  main { grid-template-columns: 1fr; }
+  header { padding: 12px 14px; gap: 12px; }
+  .header-right { gap: 8px; }
+  .header-right .btn-ghost { padding: 7px 10px; }
+  .legend { display: none; }
+  .legend-trigger.icon-btn { display: inline-flex; }
+  .fold-btn { display: none; }
+
+  main {
+    grid-template-columns: 1fr;
+    padding: 0 10px 10px;
+    gap: 0;
+  }
+  body.folded main { grid-template-columns: 1fr; gap: 0; }
+
+  /* deposit panel becomes a bottom sheet */
+  .left {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: 0; top: auto;
+    z-index: 26;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+    max-height: 80vh;
+    transform: translateY(100%);
+    opacity: 1;
+    pointer-events: auto;
+    transition: transform .25s cubic-bezier(.4,0,.2,1);
+    animation: none;
+  }
+  body.folded .left {
+    transform: translateY(100%);
+    opacity: 1;
+    padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+    border-width: 1px;
+    pointer-events: auto;
+  }
+  .left.sheet-open { transform: translateY(0); }
+  body.folded .left.sheet-open { transform: translateY(0); }
+  .panel-head { font-size: 16px; }
+  .sheet-close { display: grid; }
+  textarea { min-height: 140px; }
+
+  .deposit-fab { display: inline-flex; }
+  .sheet-backdrop { display: block; }
+
+  /* catalog */
+  .right { border-radius: 12px; }
+  .tabs { padding: 10px 12px; gap: 6px; }
+  .tabs-left {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    min-width: 0;
+    flex: 1;
+  }
+  .tabs-left::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 7px 10px;
+    font-size: 12.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tabs-right { flex-shrink: 0; }
+  .search { width: 130px; }
+  .search:focus { width: 150px; }
+  .section-title { top: 47px; padding: 14px 14px 7px; }
+
+  .item { margin: 1px 6px; padding: 10px; gap: 10px; }
+  .row-tags { display: none; }
+  .refresh-btn { display: grid; }
+  .title { font-size: 14px; }
+  .url { font-size: 11px; }
+
+  /* tag editor — full-width sheet */
+  .tagbar {
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    transform: translateY(16px);
+    max-width: none;
+    flex-wrap: wrap;
+  }
+  .tagbar.show { transform: translateY(0); }
+  .tagbar .tb-chips { max-width: none; flex: 1 0 100%; }
+  .tagbar .tb-input-wrap { flex: 1; min-width: 0; }
+  .tagbar input { width: 100%; min-width: 0; }
+
+  /* command palette */
+  .cmdk-backdrop { padding: 6vh 12px 0; }
+  .cmdk { max-height: 80vh; }
+  .cmdk-title { max-width: 50%; }
 }
