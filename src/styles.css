@@ -1180,6 +1180,7 @@ header, .left, .right { animation: fade .45s ease both; }
   .item-row { overflow: hidden; }
   .swipe-bg { display: flex; inset: 1px 6px; }
   .item { margin: 1px 6px; padding: 10px; gap: 10px; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  .item.pressing { background: var(--accent-bg); transition: background .25s ease; }
   .item.sel::before { display: none; }
   .row-tags { display: none; }
   .item .refresh-btn,

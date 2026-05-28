@@ -4,6 +4,7 @@ import { RotateCw, Clock, Archive } from "lucide-react";
 const COMMIT_PX = 80;
 const SWIPE_THRESH = 10;
 const LONG_PRESS_MS = 500;
+const PRESS_VISUAL_MS = 200;
 
 function isMobile() {
   return typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
@@ -14,8 +15,13 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
   const bgRef = useRef(null);
   const t = useRef({
     x0: 0, y0: 0, dx: 0, dy: 0, t0: 0,
-    swiping: false, longPressTimer: null, suppressClick: false,
+    swiping: false, longPressTimer: null, pressVisualTimer: null, suppressClick: false,
   });
+
+  function clearPressVisual() {
+    clearTimeout(t.current.pressVisualTimer);
+    innerRef.current?.classList.remove("pressing");
+  }
 
   function setBg(dx) {
     const el = bgRef.current;
@@ -55,10 +61,15 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
     if (innerRef.current) innerRef.current.style.transition = "none";
     if (bgRef.current) bgRef.current.style.transition = "none";
     clearTimeout(t.current.longPressTimer);
+    clearTimeout(t.current.pressVisualTimer);
+    t.current.pressVisualTimer = setTimeout(() => {
+      if (!t.current.swiping) innerRef.current?.classList.add("pressing");
+    }, PRESS_VISUAL_MS);
     t.current.longPressTimer = setTimeout(() => {
       if (!t.current.swiping && Math.abs(t.current.dx) < SWIPE_THRESH && Math.abs(t.current.dy) < SWIPE_THRESH) {
         t.current.suppressClick = true;
         try { navigator.vibrate?.(8); } catch {}
+        clearPressVisual();
         onLongPress?.();
       }
     }, LONG_PRESS_MS);
@@ -75,11 +86,13 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
     if (!t.current.swiping) {
       if (Math.abs(dy) > SWIPE_THRESH && Math.abs(dy) > Math.abs(dx)) {
         clearTimeout(t.current.longPressTimer);
+        clearPressVisual();
         return;
       }
       if (Math.abs(dx) > SWIPE_THRESH) {
         t.current.swiping = true;
         clearTimeout(t.current.longPressTimer);
+        clearPressVisual();
       } else {
         return;
       }
@@ -92,6 +105,7 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
   function onTouchEnd() {
     if (!isMobile()) return;
     clearTimeout(t.current.longPressTimer);
+    clearPressVisual();
     const { dx, dy, swiping, t0 } = t.current;
 
     if (swiping) {
@@ -99,9 +113,12 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
       if (Math.abs(dx) > COMMIT_PX) {
         if (dx > 0) onSwipe?.("later");
         else onSwipe?.("archived");
-      } else {
-        snapBack();
       }
+      // Always snap back: when the commit cross-sections the row React
+      // unmounts it (no visible animation), but when the move is a no-op
+      // (e.g. swipe-right inside the Later view) the row stays mounted and
+      // would otherwise keep the inline transform.
+      snapBack();
       t.current.swiping = false;
       return;
     }
@@ -114,6 +131,7 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
 
   function onTouchCancel() {
     clearTimeout(t.current.longPressTimer);
+    clearPressVisual();
     if (t.current.swiping) snapBack();
     t.current.swiping = false;
   }
