@@ -6,6 +6,7 @@ import {
   Keyboard, Plus, X,
 } from "lucide-react";
 import Row from "./components/Row.jsx";
+import RowActions from "./components/RowActions.jsx";
 import TagEditor from "./components/TagEditor.jsx";
 import AuthControl from "./components/AuthControl.jsx";
 import CommandPalette from "./components/CommandPalette.jsx";
@@ -39,6 +40,7 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [actionsId, setActionsId] = useState(null);
 
   // auth + cross-device sync (no-op if Supabase env isn't configured)
   useEffect(() => initSync(setSession), []);
@@ -323,6 +325,11 @@ export default function App() {
                         onOpen={() => window.open(i.url, "_blank")}
                         onFilterTag={(t) => useHoard.getState().toggleTagFilter(t)}
                         onRefresh={() => useHoard.getState().refresh(i.id)}
+                        onSwipe={(action) => {
+                          useHoard.getState().setSelId(i.id);
+                          useHoard.getState().act(action);
+                        }}
+                        onLongPress={() => setActionsId(i.id)}
                       />
                     ))}
               </div>
@@ -340,6 +347,36 @@ export default function App() {
           onClose={() => useHoard.getState().setEditingId(null)}
         />
       )}
+
+      {actionsId && (() => {
+        const it = items.find((x) => x.id === actionsId);
+        if (!it) return null;
+        return (
+          <RowActions
+            item={it}
+            onClose={() => setActionsId(null)}
+            onOpen={() => { window.open(it.url, "_blank"); setActionsId(null); }}
+            onTag={() => {
+              useHoard.getState().setEditingId(it.id);
+              setActionsId(null);
+            }}
+            onRefresh={() => {
+              useHoard.getState().refresh(it.id);
+              setActionsId(null);
+            }}
+            onMove={(state) => {
+              useHoard.getState().setSelId(it.id);
+              useHoard.getState().act(state);
+              setActionsId(null);
+            }}
+            onDelete={() => {
+              useHoard.getState().setSelId(it.id);
+              useHoard.getState().act("delete");
+              setActionsId(null);
+            }}
+          />
+        );
+      })()}
 
       {paletteOpen && (
         <CommandPalette
