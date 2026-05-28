@@ -173,9 +173,16 @@ export default function App() {
     <>
       <header>
         <div className="brand">
-          <button className="fold-btn" title="Toggle deposit panel" onClick={() => useHoard.getState().toggleFolded()}>
+          <button
+            className="fold-btn"
+            aria-label={folded ? "Show left panel" : "Hide left panel"}
+            onClick={() => useHoard.getState().toggleFolded()}
+          >
             <ChevronLeft size={14} strokeWidth={2.2} />
-            <kbd>[</kbd>
+            <span className="fold-btn-tooltip" role="tooltip">
+              {folded ? "Show left panel" : "Hide left panel"}
+              <kbd>[</kbd>
+            </span>
           </button>
           <img className="logo" src="/favicon.svg" alt="" />
           <h1>Hoard</h1>
