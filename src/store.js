@@ -54,16 +54,21 @@ export function matchesItem(i, { tagFilter, tagWants, text }) {
   return true;
 }
 
+// Sort a list of items by `added` timestamp. `dir` is "newest" (desc) or "oldest" (asc).
+export function sortByAdded(list, dir) {
+  const sign = dir === "oldest" ? 1 : -1;
+  return list.slice().sort((a, b) => sign * ((a.added || 0) - (b.added || 0)));
+}
+
 // Pure selector — used both by the store's actions (via get()) and by the UI.
-export function selectVisible({ items, view, tagFilter, query }) {
+export function selectVisible({ items, view, tagFilter, query, sort }) {
   const allTags = [...new Set(items.flatMap((i) => i.tags || []))];
   const parsed = parseQuery(query || "", allTags);
   const secs = view === "all" ? SECTIONS : SECTIONS.filter((s) => s.key === view);
   const out = [];
   secs.forEach((s) => {
-    items
-      .filter((i) => i.state === s.key && matchesItem(i, { tagFilter, ...parsed }))
-      .forEach((i) => out.push(i));
+    const inSec = items.filter((i) => i.state === s.key && matchesItem(i, { tagFilter, ...parsed }));
+    sortByAdded(inSec, sort).forEach((i) => out.push(i));
   });
   return out;
 }
@@ -80,6 +85,7 @@ export const useHoard = create(
       view: "all",
       tagFilter: null,
       query: "",
+      sort: "newest",
       folded: false,
       editingId: null,
       exportOpen: false,
@@ -89,6 +95,8 @@ export const useHoard = create(
       setSelId: (selId) => set({ selId }),
       setView: (view) => set({ view, selId: null }),
       setQuery: (query) => set({ query, selId: null }),
+      setSort: (sort) => set({ sort, selId: null }),
+      toggleSort: () => set((s) => ({ sort: s.sort === "oldest" ? "newest" : "oldest", selId: null })),
       toggleTagFilter: (tag) => set((s) => ({ tagFilter: s.tagFilter === tag ? null : tag, selId: null })),
       clearTagFilter: () => set({ tagFilter: null, selId: null }),
       toggleFolded: () => set((s) => ({ folded: !s.folded })),
@@ -254,7 +262,7 @@ export const useHoard = create(
     {
       name: "hoard",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ items: s.items, view: s.view, folded: s.folded }),
+      partialize: (s) => ({ items: s.items, view: s.view, folded: s.folded, sort: s.sort }),
     }
   )
   )

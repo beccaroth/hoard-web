@@ -738,6 +738,9 @@ header, .left, .right { animation: fade .45s ease both; }
 .tab.tagf .x { font-weight: 700; opacity: .6; margin-left: 2px; }
 .tab.tagf:hover .x { opacity: 1; }
 
+.tab.sort-toggle svg { color: var(--faint); }
+.tab.sort-toggle:hover svg { color: var(--ink); }
+
 /* ---------- tag editor bar ---------- */
 .tagbar {
   position: fixed;
@@ -1173,6 +1176,7 @@ header, .left, .right { animation: fade .45s ease both; }
     flex-shrink: 0;
   }
   .tabs-right { flex-shrink: 0; }
+  .tab.sort-toggle .sort-label { display: none; }
   .search { width: 130px; }
   .search:focus { width: 150px; }
   .section-title { top: 47px; padding: 14px 14px 7px; }

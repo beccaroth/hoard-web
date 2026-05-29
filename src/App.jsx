@@ -3,7 +3,7 @@ import { Toaster, toast } from "sonner";
 import {
   ChevronLeft, Download, Upload, Copy, FileText, Braces,
   Layers, Inbox, Clock, Archive, PanelLeft,
-  Keyboard, Plus, X,
+  Keyboard, Plus, X, ArrowDownWideNarrow, ArrowUpWideNarrow,
 } from "lucide-react";
 import Row from "./components/Row.jsx";
 import RowActions from "./components/RowActions.jsx";
@@ -12,7 +12,7 @@ import AuthControl from "./components/AuthControl.jsx";
 import CommandPalette from "./components/CommandPalette.jsx";
 import SearchBox from "./components/SearchBox.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
-import { useHoard, selectVisible, parseQuery, matchesItem, SECTIONS } from "./store.js";
+import { useHoard, selectVisible, parseQuery, matchesItem, sortByAdded, SECTIONS } from "./store.js";
 import { initSync } from "./lib/sync.js";
 
 const KEYS = [
@@ -27,6 +27,7 @@ export default function App() {
   const view = useHoard((s) => s.view);
   const tagFilter = useHoard((s) => s.tagFilter);
   const query = useHoard((s) => s.query);
+  const sort = useHoard((s) => s.sort);
   const selId = useHoard((s) => s.selId);
   const folded = useHoard((s) => s.folded);
   const editingId = useHoard((s) => s.editingId);
@@ -45,7 +46,7 @@ export default function App() {
   // auth + cross-device sync (no-op if Supabase env isn't configured)
   useEffect(() => initSync(setSession), []);
 
-  const visible = useMemo(() => selectVisible({ items, view, tagFilter, query }), [items, view, tagFilter, query]);
+  const visible = useMemo(() => selectVisible({ items, view, tagFilter, query, sort }), [items, view, tagFilter, query, sort]);
   const allTags = useMemo(() => [...new Set(items.flatMap((i) => i.tags || []))].sort(), [items]);
   const parsedQuery = useMemo(() => parseQuery(query, allTags), [query, allTags]);
   const editingItem = editingId ? items.find((i) => i.id === editingId) : null;
@@ -293,6 +294,17 @@ export default function App() {
                   #{tagFilter}<span className="x">×</span>
                 </button>
               )}
+              <button
+                className="tab sort-toggle"
+                title={sort === "newest" ? "Newest first — click to flip" : "Oldest first — click to flip"}
+                aria-label={`Sort by date added: ${sort} first`}
+                onClick={() => useHoard.getState().toggleSort()}
+              >
+                {sort === "newest"
+                  ? <ArrowDownWideNarrow size={14} />
+                  : <ArrowUpWideNarrow size={14} />}
+                <span className="sort-label">{sort === "newest" ? "Newest" : "Oldest"}</span>
+              </button>
               <SearchBox
                 ref={searchRef}
                 query={query}
@@ -303,7 +315,10 @@ export default function App() {
           </div>
 
           {(single ? SECTIONS.filter((s) => s.key === view) : SECTIONS).map((sec) => {
-            const secItems = items.filter((i) => i.state === sec.key && matchesItem(i, { tagFilter, ...parsedQuery }));
+            const secItems = sortByAdded(
+              items.filter((i) => i.state === sec.key && matchesItem(i, { tagFilter, ...parsedQuery })),
+              sort,
+            );
             if (!single && sec.key !== "inbox" && !secItems.length) return null;
             return (
               <div key={sec.key}>
