@@ -386,6 +386,39 @@ button {
   padding: 7px 9px;
   display: inline-grid;
   place-items: center;
+  position: relative;
+}
+.auth-trigger .sync-dot {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  border: 1.5px solid var(--bg);
+}
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+.sync-dot.sync-synced { background: #22a06b; }
+.sync-dot.sync-error  { background: #e5484d; }
+.sync-dot.sync-idle   { background: var(--muted); }
+.sync-dot.sync-syncing {
+  background: var(--accent);
+  animation: sync-pulse 1s ease-in-out infinite;
+}
+@keyframes sync-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+.auth-sync {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 11px 8px;
+  font-size: 11.5px;
+  color: var(--muted);
 }
 .auth-menu {
   left: auto;

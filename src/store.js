@@ -81,6 +81,7 @@ export const useHoard = create(
   persist(
     (set, get) => ({
       items: [],
+      tombstones: [], // { id, deletedAt } — deletes that must propagate across devices
       selId: null,
       view: "all",
       tagFilter: null,
@@ -90,8 +91,13 @@ export const useHoard = create(
       editingId: null,
       exportOpen: false,
       status: "",
+      // sync status — non-persisted, driven by lib/sync.js
+      syncState: "idle", // "idle" | "syncing" | "synced" | "error"
+      lastSyncAt: null,
 
       // ---- simple setters ----
+      setSyncState: (syncState) => set({ syncState }),
+      setLastSyncAt: (lastSyncAt) => set({ lastSyncAt }),
       setSelId: (selId) => set({ selId }),
       setView: (view) => set({ view, selId: null }),
       setQuery: (query) => set({ query, selId: null }),
@@ -112,7 +118,7 @@ export const useHoard = create(
           set((s) => ({
             items: s.items.map((i) =>
               i.id === id
-                ? { ...i, title: data.title || i.title, favicon: data.favicon || i.favicon, loading: false }
+                ? { ...i, title: data.title || i.title, favicon: data.favicon || i.favicon, loading: false, updatedAt: Date.now() }
                 : i
             ),
           }));
@@ -132,9 +138,10 @@ export const useHoard = create(
           const key = normalizeUrl(url);
           if (seen.has(key)) { dupes++; return; }
           seen.add(key);
+          const now = Date.now();
           fresh.push({
             id: uid(), url, title: domain(url), favicon: googleFav(url),
-            state: "inbox", added: Date.now(), loading: false, tags: [],
+            state: "inbox", added: now, updatedAt: now, loading: false, tags: [],
           });
         });
         if (fresh.length) set({ items: [...fresh.slice().reverse(), ...items] });
@@ -159,12 +166,17 @@ export const useHoard = create(
 
         if (action === "delete") {
           undoStack.push({ type: "delete", item, index: state.items.indexOf(item) });
-          set({ items: state.items.filter((i) => i.id !== item.id), selId: nextId, status: "Tossed. Press u to undo." });
+          set({
+            items: state.items.filter((i) => i.id !== item.id),
+            tombstones: [...state.tombstones.filter((t) => t.id !== item.id), { id: item.id, deletedAt: Date.now() }],
+            selId: nextId,
+            status: "Tossed. Press u to undo.",
+          });
           toast("Tossed", { action: undoAction });
         } else {
           undoStack.push({ type: "state", id: item.id, prevState: item.state });
           set({
-            items: state.items.map((i) => (i.id === item.id ? { ...i, state: action } : i)),
+            items: state.items.map((i) => (i.id === item.id ? { ...i, state: action, updatedAt: Date.now() } : i)),
             selId: nextId,
             status: `${action === "later" ? "Saved for later" : action === "archived" ? "Archived" : "Moved to inbox"}. Press u to undo.`,
           });
@@ -176,13 +188,19 @@ export const useHoard = create(
       undo: () => {
         const last = undoStack.pop();
         if (!last) { set({ status: "Nothing to undo." }); return; }
-        const { items } = get();
+        const { items, tombstones } = get();
         if (last.type === "delete") {
           const copy = [...items];
-          copy.splice(Math.min(last.index, copy.length), 0, last.item);
-          set({ items: copy, selId: last.item.id, status: "Undone." });
+          // Restore with a fresh updatedAt so the un-delete out-races its own tombstone on merge.
+          copy.splice(Math.min(last.index, copy.length), 0, { ...last.item, updatedAt: Date.now() });
+          set({
+            items: copy,
+            tombstones: tombstones.filter((t) => t.id !== last.item.id),
+            selId: last.item.id,
+            status: "Undone.",
+          });
         } else {
-          set({ items: items.map((i) => (i.id === last.id ? { ...i, state: last.prevState } : i)), selId: last.id, status: "Undone." });
+          set({ items: items.map((i) => (i.id === last.id ? { ...i, state: last.prevState, updatedAt: Date.now() } : i)), selId: last.id, status: "Undone." });
         }
       },
 
@@ -221,12 +239,12 @@ export const useHoard = create(
         if (!tag) return;
         set((s) => ({
           items: s.items.map((i) =>
-            i.id === id && !(i.tags || []).includes(tag) ? { ...i, tags: [...(i.tags || []), tag] } : i
+            i.id === id && !(i.tags || []).includes(tag) ? { ...i, tags: [...(i.tags || []), tag], updatedAt: Date.now() } : i
           ),
         }));
       },
       removeTag: (id, tag) =>
-        set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, tags: (i.tags || []).filter((t) => t !== tag) } : i)) })),
+        set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, tags: (i.tags || []).filter((t) => t !== tag), updatedAt: Date.now() } : i)) })),
 
       // ---- bulk ----
       importItems: (parsed) => {
@@ -240,13 +258,15 @@ export const useHoard = create(
           const key = normalizeUrl(raw.url);
           if (seen.has(key)) { dupes++; return; }
           seen.add(key);
+          const added = typeof raw.added === "number" ? raw.added : Date.now();
           fresh.push({
             id: uid(),
             url: raw.url,
             title: raw.title ? String(raw.title) : domain(raw.url),
             favicon: googleFav(raw.url),
             state: VALID_STATES.has(raw.state) ? raw.state : "inbox",
-            added: typeof raw.added === "number" ? raw.added : Date.now(),
+            added,
+            updatedAt: Date.now(),
             loading: false,
             tags: Array.isArray(raw.tags) ? [...new Set(raw.tags.map((t) => String(t).toLowerCase()))] : [],
           });
@@ -257,12 +277,24 @@ export const useHoard = create(
         toast(msg || "Nothing new to import");
       },
 
-      clearAll: () => { undoStack.length = 0; set({ items: [], selId: null }); },
+      clearAll: () => {
+        undoStack.length = 0;
+        const now = Date.now();
+        // Tombstone every item so the clear propagates instead of being undone by a remote merge.
+        set((s) => ({
+          tombstones: [
+            ...s.tombstones.filter((t) => !s.items.some((i) => i.id === t.id)),
+            ...s.items.map((i) => ({ id: i.id, deletedAt: now })),
+          ],
+          items: [],
+          selId: null,
+        }));
+      },
     }),
     {
       name: "hoard",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ items: s.items, view: s.view, folded: s.folded, sort: s.sort }),
+      partialize: (s) => ({ items: s.items, tombstones: s.tombstones, view: s.view, folded: s.folded, sort: s.sort }),
     }
   )
   )

@@ -2,6 +2,26 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Cloud, LogOut, User, X } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
+import { useHoard } from "../store.js";
+
+function formatAgo(ts) {
+  if (!ts) return "";
+  const s = Math.round((Date.now() - ts) / 1000);
+  if (s < 5) return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+
+const SYNC_LABELS = {
+  idle: "Sync ready",
+  syncing: "Syncing…",
+  synced: "Synced",
+  error: "Sync error — will retry",
+};
 
 export default function AuthControl({ session }) {
   const [open, setOpen] = useState(false);
@@ -16,6 +36,9 @@ export default function AuthControl({ session }) {
   const [newPwd, setNewPwd] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
   const [updating, setUpdating] = useState(false);
+
+  const syncState = useHoard((s) => s.syncState);
+  const lastSyncAt = useHoard((s) => s.lastSyncAt);
 
   useEffect(() => {
     if (!open) return;
@@ -173,18 +196,26 @@ export default function AuthControl({ session }) {
   );
 
   if (session) {
+    const syncLabel = SYNC_LABELS[syncState] || "";
+    const syncTitle =
+      syncState === "synced" && lastSyncAt ? `Synced ${formatAgo(lastSyncAt)}` : syncLabel;
     return (
       <div className="auth">
         <button
           className="btn-ghost icon-btn auth-trigger"
-          title={session.user.email}
+          title={`${session.user.email} — ${syncTitle}`}
           onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         >
           <User size={15} />
+          <span className={`sync-dot sync-${syncState}`} aria-hidden="true" />
         </button>
         {open && (
           <div className="menu show auth-menu" onClick={(e) => e.stopPropagation()}>
             <div className="auth-email" title={session.user.email}>{session.user.email}</div>
+            <div className="auth-sync">
+              <span className={`sync-dot sync-${syncState}`} aria-hidden="true" />
+              <span>{syncTitle}</span>
+            </div>
             <div className="sep" />
             <button onClick={async () => {
               setOpen(false);
