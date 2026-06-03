@@ -1,7 +1,8 @@
 import { useRef } from "react";
-import { RotateCw, Clock, Archive } from "lucide-react";
+import { RotateCw, Clock, Archive, Tag, Trash2 } from "lucide-react";
 
 const COMMIT_PX = 80;
+const LONG_COMMIT_PX = 180;
 const SWIPE_THRESH = 10;
 const LONG_PRESS_MS = 500;
 const PRESS_VISUAL_MS = 200;
@@ -26,14 +27,19 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
   function setBg(dx) {
     const el = bgRef.current;
     if (!el) return;
-    if (dx > 0) {
-      el.dataset.dir = "later";
-      el.style.opacity = Math.min(1, Math.abs(dx) / COMMIT_PX);
-    } else if (dx < 0) {
-      el.dataset.dir = "archive";
-      el.style.opacity = Math.min(1, Math.abs(dx) / COMMIT_PX);
-    } else {
+    const abs = Math.abs(dx);
+    if (abs === 0) {
       el.style.opacity = 0;
+      t.current.long = false;
+      return;
+    }
+    const long = abs > LONG_COMMIT_PX;
+    el.dataset.dir = dx > 0 ? (long ? "tag" : "later") : (long ? "delete" : "archive");
+    el.style.opacity = Math.min(1, abs / COMMIT_PX);
+    // Light haptic when crossing into the long-swipe (secondary action) zone.
+    if (long !== t.current.long) {
+      if (long) { try { navigator.vibrate?.(8); } catch {} }
+      t.current.long = long;
     }
   }
 
@@ -58,6 +64,7 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
     t.current.t0 = Date.now();
     t.current.swiping = false;
     t.current.suppressClick = false;
+    t.current.long = false;
     if (innerRef.current) innerRef.current.style.transition = "none";
     if (bgRef.current) bgRef.current.style.transition = "none";
     clearTimeout(t.current.longPressTimer);
@@ -110,9 +117,10 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
 
     if (swiping) {
       t.current.suppressClick = true;
-      if (Math.abs(dx) > COMMIT_PX) {
-        if (dx > 0) onSwipe?.("later");
-        else onSwipe?.("archived");
+      const abs = Math.abs(dx);
+      if (abs > COMMIT_PX) {
+        if (dx > 0) onSwipe?.(abs > LONG_COMMIT_PX ? "tag" : "later");
+        else onSwipe?.(abs > LONG_COMMIT_PX ? "delete" : "archived");
       }
       // Always snap back: when the commit cross-sections the row React
       // unmounts it (no visible animation), but when the move is a no-op
@@ -149,6 +157,8 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
     <div className="item-row">
       <div className="swipe-bg" ref={bgRef} aria-hidden="true">
         <span className="swipe-icon swipe-icon-later"><Clock size={16} /> Later</span>
+        <span className="swipe-icon swipe-icon-tag"><Tag size={16} /> Tag</span>
+        <span className="swipe-icon swipe-icon-delete">Delete <Trash2 size={16} /></span>
         <span className="swipe-icon swipe-icon-archive">Archive <Archive size={16} /></span>
       </div>
       <div

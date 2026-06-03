@@ -605,7 +605,7 @@ button {
   overflow: hidden;
 }
 .swipe-bg .swipe-icon {
-  display: inline-flex;
+  display: none;
   align-items: center;
   gap: 6px;
   font-size: 12.5px;
@@ -614,11 +614,22 @@ button {
   text-transform: uppercase;
   color: #fff;
 }
-.swipe-bg .swipe-icon-archive { margin-left: auto; }
-.swipe-bg[data-dir="later"] { background: var(--amber); }
-.swipe-bg[data-dir="later"] .swipe-icon-archive { visibility: hidden; }
+/* Left-edge icons (revealed on a right swipe) sit at the start; right-edge
+   icons (revealed on a left swipe) get pushed to the end. */
+.swipe-bg .swipe-icon-archive,
+.swipe-bg .swipe-icon-delete { margin-left: auto; }
+.swipe-bg[data-dir="later"]  { background: var(--amber); }
+.swipe-bg[data-dir="tag"]    { background: var(--accent); }
 .swipe-bg[data-dir="archive"] { background: var(--green); }
-.swipe-bg[data-dir="archive"] .swipe-icon-later { visibility: hidden; }
+.swipe-bg[data-dir="delete"] { background: #c54a3a; }
+.swipe-bg[data-dir="later"]   .swipe-icon-later   { display: inline-flex; }
+.swipe-bg[data-dir="tag"]     .swipe-icon-tag     { display: inline-flex; }
+.swipe-bg[data-dir="archive"] .swipe-icon-archive { display: inline-flex; }
+.swipe-bg[data-dir="delete"]  .swipe-icon-delete  { display: inline-flex; }
+
+/* Keep toasts below the modal layer (TagEditor 10001/2, RowActions 10003) so
+   the long-press actions panel sits over any visible notification toast. */
+[data-sonner-toaster] { z-index: 10000 !important; }
 
 .item {
   display: flex;
@@ -1153,6 +1164,14 @@ header, .left, .right { animation: fade .45s ease both; }
   .panel-head { font-size: 16px; }
   .sheet-close { display: grid; }
   textarea { min-height: 140px; }
+
+  /* iOS Safari auto-zooms when a focused field's font-size is < 16px.
+     Bump every text field to 16px on mobile to suppress the zoom. */
+  textarea,
+  .search,
+  .auth-input,
+  .tagbar input,
+  .cmdk-input { font-size: 16px; }
 
   .deposit-fab { display: inline-flex; }
   .sheet-backdrop { display: block; }
