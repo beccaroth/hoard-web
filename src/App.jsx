@@ -342,6 +342,7 @@ export default function App() {
                         onRefresh={() => useHoard.getState().refresh(i.id)}
                         onSwipe={(action) => {
                           useHoard.getState().setSelId(i.id);
+                          if (action === "tag") { useHoard.getState().setEditingId(i.id); return; }
                           useHoard.getState().act(action);
                         }}
                         onLongPress={() => setActionsId(i.id)}
