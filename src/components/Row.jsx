@@ -1,8 +1,13 @@
 import { useRef } from "react";
 import { RotateCw, Clock, Archive, Tag, Trash2 } from "lucide-react";
 
-const COMMIT_PX = 80;
-const LONG_COMMIT_PX = 180;
+// Swipe thresholds as a fraction of the row width: short commit fires the
+// primary action, long commit the secondary. Measured per-gesture so the feel
+// stays consistent across phone sizes and orientations. The long threshold is
+// capped so it never becomes an unreachable drag on the widest mobile widths.
+const COMMIT_FRAC = 0.22;
+const LONG_COMMIT_FRAC = 0.5;
+const LONG_COMMIT_MAX_PX = 260;
 const SWIPE_THRESH = 10;
 const LONG_PRESS_MS = 500;
 const PRESS_VISUAL_MS = 200;
@@ -24,6 +29,10 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
     innerRef.current?.classList.remove("pressing");
   }
 
+  // Thresholds derived from the row width captured at gesture start.
+  function commitPx() { return (t.current.w || 0) * COMMIT_FRAC; }
+  function longPx() { return Math.min((t.current.w || 0) * LONG_COMMIT_FRAC, LONG_COMMIT_MAX_PX); }
+
   function setBg(dx) {
     const el = bgRef.current;
     if (!el) return;
@@ -33,9 +42,9 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
       t.current.long = false;
       return;
     }
-    const long = abs > LONG_COMMIT_PX;
+    const long = abs > longPx();
     el.dataset.dir = dx > 0 ? (long ? "tag" : "later") : (long ? "delete" : "archive");
-    el.style.opacity = Math.min(1, abs / COMMIT_PX);
+    el.style.opacity = Math.min(1, abs / commitPx());
     // Light haptic when crossing into the long-swipe (secondary action) zone.
     if (long !== t.current.long) {
       if (long) { try { navigator.vibrate?.(8); } catch {} }
@@ -65,6 +74,7 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
     t.current.swiping = false;
     t.current.suppressClick = false;
     t.current.long = false;
+    t.current.w = innerRef.current?.offsetWidth || 0;
     if (innerRef.current) innerRef.current.style.transition = "none";
     if (bgRef.current) bgRef.current.style.transition = "none";
     clearTimeout(t.current.longPressTimer);
@@ -118,9 +128,10 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
     if (swiping) {
       t.current.suppressClick = true;
       const abs = Math.abs(dx);
-      if (abs > COMMIT_PX) {
-        if (dx > 0) onSwipe?.(abs > LONG_COMMIT_PX ? "tag" : "later");
-        else onSwipe?.(abs > LONG_COMMIT_PX ? "delete" : "archived");
+      if (abs > commitPx()) {
+        const long = abs > longPx();
+        if (dx > 0) onSwipe?.(long ? "tag" : "later");
+        else onSwipe?.(long ? "delete" : "archived");
       }
       // Always snap back: when the commit cross-sections the row React
       // unmounts it (no visible animation), but when the move is a no-op
