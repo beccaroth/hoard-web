@@ -6,6 +6,21 @@ let applyingRemote = false; // guards against echoing remote writes back up
 let currentUserId = null;
 let channel = null;
 
+// Initial-load gate: the bookmarklet's incoming link must be filed *after* the
+// first session pull settles, otherwise a "remote wins" sign-in pull (onSignedIn)
+// would clobber the just-added item. Callers register via whenSynced().
+let synced = false;
+const syncedWaiters = [];
+function markSynced() {
+  if (synced) return;
+  synced = true;
+  while (syncedWaiters.length) syncedWaiters.shift()();
+}
+export function whenSynced(cb) {
+  if (synced) cb();
+  else syncedWaiters.push(cb);
+}
+
 function normalize(arr) {
   return (Array.isArray(arr) ? arr : []).map((i) => ({
     ...i,
@@ -80,9 +95,12 @@ async function handleSession(session, onAuthChange) {
 
 // Wires auth + realtime + debounced push. Returns a cleanup function.
 export function initSync(onAuthChange) {
-  if (!supabase) { onAuthChange?.(null); return () => {}; }
+  if (!supabase) { onAuthChange?.(null); markSynced(); return () => {}; }
 
-  supabase.auth.getSession().then(({ data }) => handleSession(data.session, onAuthChange));
+  supabase.auth
+    .getSession()
+    .then(({ data }) => handleSession(data.session, onAuthChange))
+    .finally(markSynced);
   const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
     handleSession(session, onAuthChange)
   );

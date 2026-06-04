@@ -13,7 +13,7 @@ import CommandPalette from "./components/CommandPalette.jsx";
 import SearchBox from "./components/SearchBox.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
 import { useHoard, selectVisible, parseQuery, matchesItem, sortByAdded, SECTIONS } from "./store.js";
-import { initSync } from "./lib/sync.js";
+import { initSync, whenSynced } from "./lib/sync.js";
 
 const KEYS = [
   { k: ["j", "k"], lab: "move" }, { k: ["o"], lab: "open" }, { k: ["c"], lab: "copy" },
@@ -45,6 +45,18 @@ export default function App() {
 
   // auth + cross-device sync (no-op if Supabase env isn't configured)
   useEffect(() => initSync(setSession), []);
+
+  // Incoming link from the bookmarklet / iOS shortcut: ?add=<url>&title=<title>.
+  // File it only once sync settles so a sign-in pull can't clobber it, then
+  // strip the params so a refresh doesn't re-file the same link.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const url = params.get("add") || params.get("url");
+    if (!url) return;
+    const title = params.get("title") || "";
+    window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+    whenSynced(() => useHoard.getState().quickAdd({ url, title }));
+  }, []);
 
   const visible = useMemo(() => selectVisible({ items, view, tagFilter, query, sort }), [items, view, tagFilter, query, sort]);
   const allTags = useMemo(() => [...new Set(items.flatMap((i) => i.tags || []))].sort(), [items]);
