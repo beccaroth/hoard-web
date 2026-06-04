@@ -8,6 +8,22 @@ let applyingRemote = false; // guards against echoing merged writes back up
 let currentUserId = null;
 let channel = null;
 
+// Initial-load gate: the bookmarklet's incoming link must be filed *after* the
+// first session pull settles, otherwise the sign-in merge could race the add.
+// Callers register via whenSynced(). (Distinct from markSynced(), which drives
+// the sync-status UI.)
+let ready = false;
+const readyWaiters = [];
+function flushReady() {
+  if (ready) return;
+  ready = true;
+  while (readyWaiters.length) readyWaiters.shift()();
+}
+export function whenSynced(cb) {
+  if (ready) cb();
+  else readyWaiters.push(cb);
+}
+
 // ---- store glue ----
 
 function getLocalBlob() {
@@ -159,9 +175,12 @@ async function handleSession(session, onAuthChange) {
 
 // Wires auth + realtime + debounced push. Returns a cleanup function.
 export function initSync(onAuthChange) {
-  if (!supabase) { onAuthChange?.(null); return () => {}; }
+  if (!supabase) { onAuthChange?.(null); flushReady(); return () => {}; }
 
-  supabase.auth.getSession().then(({ data }) => handleSession(data.session, onAuthChange));
+  supabase.auth
+    .getSession()
+    .then(({ data }) => handleSession(data.session, onAuthChange))
+    .finally(flushReady);
   const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
     handleSession(session, onAuthChange)
   );

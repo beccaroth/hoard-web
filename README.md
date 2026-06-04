@@ -38,6 +38,26 @@ Press the keyboard icon in the header (or `⌘K` for the command palette) to see
 | `/` | Focus search |
 | `u` | Undo |
 
+## Quick add from anywhere
+
+Hoard files any link opened with `?add=<url>` (optionally `&title=<title>`). The
+add happens after sync settles, then the params are stripped from the URL.
+
+**Desktop bookmarklet** — make a new bookmark with this as the URL, then click it
+on any page:
+
+```js
+javascript:(function(){window.open('https://hoard.rebeccaroth.dev/?add='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title),'_blank');})();
+```
+
+**iPhone (Share Sheet shortcut)** — in the Shortcuts app, create a shortcut that:
+
+1. Toggle on **Show in Share Sheet** and accept **URLs**.
+2. Add an **Open URLs** action with:
+   `https://hoard.rebeccaroth.dev/?add=[Shortcut Input]`
+
+Then share any page → your shortcut → it opens Hoard and files the link.
+
 ## Stack
 
 React + Vite, Zustand for state, Sonner for toasts, Lucide icons. Mobile-responsive with a bottom-sheet deposit panel.

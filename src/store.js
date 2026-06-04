@@ -111,14 +111,16 @@ export const useHoard = create(
       setStatus: (status) => set({ status }),
 
       // ---- metadata enrichment ----
-      enrich: async (id, url) => {
+      // `keepTitle` preserves a caller-supplied title (e.g. the real page title
+      // sent by the bookmarklet) while still upgrading the favicon.
+      enrich: async (id, url, { keepTitle = false } = {}) => {
         set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, loading: true } : i)) }));
         try {
           const data = await fetchMeta(url);
           set((s) => ({
             items: s.items.map((i) =>
               i.id === id
-                ? { ...i, title: data.title || i.title, favicon: data.favicon || i.favicon, loading: false, updatedAt: Date.now() }
+                ? { ...i, title: keepTitle ? i.title : (data.title || i.title), favicon: data.favicon || i.favicon, loading: false, updatedAt: Date.now() }
                 : i
             ),
           }));
@@ -149,6 +151,30 @@ export const useHoard = create(
         if (dupes) msg += `${msg ? " " : ""}${dupes} duplicate${dupes > 1 ? "s" : ""} skipped.`;
         set({ status: msg || "Already in the hoard." });
         fresh.forEach((it) => enrich(it.id, it.url));
+      },
+
+      // Single-link add from the bookmarklet / iOS shortcut (?add=…&title=…).
+      // Dedupes like addUrls but keeps the page title the caller hands us.
+      quickAdd: ({ url, title }) => {
+        if (!url || !/^https?:\/\//i.test(url)) { toast("That doesn't look like a link"); return false; }
+        const { items, enrich } = get();
+        const key = normalizeUrl(url);
+        const existing = items.find((i) => normalizeUrl(i.url) === key);
+        if (existing) {
+          set({ selId: existing.id, view: "all", status: "Already in your hoard." });
+          toast("Already in your hoard", { description: existing.title });
+          return false;
+        }
+        const hasTitle = Boolean(title && title.trim());
+        const now = Date.now();
+        const item = {
+          id: uid(), url, title: hasTitle ? title.trim() : domain(url),
+          favicon: googleFav(url), state: "inbox", added: now, updatedAt: now, loading: false, tags: [],
+        };
+        set({ items: [item, ...items], selId: item.id, view: "all", status: "Filed to Inbox." });
+        toast("Filed to Inbox", { description: item.title });
+        enrich(item.id, url, { keepTitle: hasTitle });
+        return true;
       },
 
       // ---- triage ----
