@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage, subscribeWithSelector } from "zustand/middleware";
 import { toast } from "sonner";
-import { extractUrls, normalizeUrl, domain, googleFav, uid } from "./lib/urls.js";
+import { extractUrls, normalizeUrl, domain, googleFav, urlId } from "./lib/urls.js";
 import { fetchMeta } from "./lib/meta.js";
 
 export const SECTIONS = [
@@ -142,7 +142,7 @@ export const useHoard = create(
           seen.add(key);
           const now = Date.now();
           fresh.push({
-            id: uid(), url, title: domain(url), favicon: googleFav(url),
+            id: urlId(url), url, title: domain(url), favicon: googleFav(url),
             state: "inbox", added: now, updatedAt: now, loading: false, tags: [],
           });
         });
@@ -168,7 +168,7 @@ export const useHoard = create(
         const hasTitle = Boolean(title && title.trim());
         const now = Date.now();
         const item = {
-          id: uid(), url, title: hasTitle ? title.trim() : domain(url),
+          id: urlId(url), url, title: hasTitle ? title.trim() : domain(url),
           favicon: googleFav(url), state: "inbox", added: now, updatedAt: now, loading: false, tags: [],
         };
         set({ items: [item, ...items], selId: item.id, view: "all", status: "Filed to Inbox." });
@@ -286,7 +286,7 @@ export const useHoard = create(
           seen.add(key);
           const added = typeof raw.added === "number" ? raw.added : Date.now();
           fresh.push({
-            id: uid(),
+            id: urlId(raw.url),
             url: raw.url,
             title: raw.title ? String(raw.title) : domain(raw.url),
             favicon: googleFav(raw.url),

@@ -11,7 +11,7 @@ export const TOMBSTONE_TTL = 30 * DAY;
 
 // When did this item last change? Falls back to creation time, then 0, so items
 // written before `updatedAt` existed still compare sanely.
-function itemVersion(i) {
+export function itemVersion(i) {
   return i.updatedAt ?? i.added ?? 0;
 }
 

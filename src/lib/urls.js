@@ -1,5 +1,25 @@
-export function uid() {
-  return Math.random().toString(36).slice(2, 10);
+// cyrb53: small, fast, well-distributed string hash (53-bit). Non-cryptographic
+// — we only need a stable, collision-resistant fingerprint of a URL.
+function cyrb53(str, seed = 0) {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+
+// Stable item id derived from the normalized URL, so the same link created
+// independently on two devices converges to one item on merge (instead of two
+// random ids that both survive). The `u_` prefix keeps derived ids in their own
+// namespace — it can never equal a legacy random id (8 chars of [0-9a-z]).
+export function urlId(url) {
+  return "u_" + cyrb53(normalizeUrl(url)).toString(36);
 }
 
 export function extractUrls(text) {
