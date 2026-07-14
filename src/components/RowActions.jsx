@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ExternalLink, Tag, RotateCw, Inbox, Clock, Archive, Trash2, X } from "lucide-react";
+import { ExternalLink, Pencil, Tag, RotateCw, Inbox, Clock, Archive, Trash2, X } from "lucide-react";
 
 const MOVE_OPTIONS = [
   { key: "inbox", label: "Move to Inbox", Icon: Inbox },
@@ -7,7 +7,7 @@ const MOVE_OPTIONS = [
   { key: "archived", label: "Archive", Icon: Archive },
 ];
 
-export default function RowActions({ item, onClose, onOpen, onTag, onRefresh, onMove, onDelete }) {
+export default function RowActions({ item, onClose, onOpen, onRename, onTag, onRefresh, onMove, onDelete }) {
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
     window.addEventListener("keydown", onKey);
@@ -38,6 +38,9 @@ export default function RowActions({ item, onClose, onOpen, onTag, onRefresh, on
         <div className="row-actions-list">
           <button className="row-action" onClick={onOpen}>
             <ExternalLink size={16} /> Open link
+          </button>
+          <button className="row-action" onClick={onRename}>
+            <Pencil size={16} /> Rename
           </button>
           <button className="row-action" onClick={onTag}>
             <Tag size={16} /> Edit tags
