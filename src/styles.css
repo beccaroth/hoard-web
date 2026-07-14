@@ -703,6 +703,23 @@ button {
   font-size: 13.5px;
   letter-spacing: -.005em;
 }
+/* Inline rename field — sized to sit in the title's place without nudging the
+   row's height, so the list doesn't jump when editing starts. */
+.title-input {
+  display: block;
+  width: 100%;
+  margin: -3px 0;
+  padding: 2px 6px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13.5px;
+  letter-spacing: -.005em;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  outline: none;
+}
 .url {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   color: var(--muted);
@@ -722,7 +739,7 @@ button {
 .badge.later    { color: var(--amber); background: var(--amber-bg); }
 .badge.archived { color: var(--green); background: var(--green-bg); }
 .spin { font-size: 11px; color: var(--faint); flex-shrink: 0; }
-.refresh-btn {
+.row-btn {
   display: none;
   flex-shrink: 0;
   margin-left: 4px;
@@ -736,10 +753,12 @@ button {
   place-items: center;
   line-height: 0;
 }
-.item.sel .refresh-btn, .item:hover .refresh-btn { display: grid; }
-.refresh-btn svg { width: 14px; height: 14px; transition: transform .4s cubic-bezier(.4,0,.2,1); }
-.refresh-btn:hover { color: var(--accent-2); border-color: var(--accent); background: var(--accent-bg); }
+.item.sel .row-btn, .item:hover .row-btn { display: grid; }
+.row-btn svg { width: 14px; height: 14px; }
+.row-btn:hover { color: var(--accent-2); border-color: var(--accent); background: var(--accent-bg); }
+.refresh-btn svg { transition: transform .4s cubic-bezier(.4,0,.2,1); }
 .refresh-btn:hover svg { transform: rotate(180deg); }
+.item.renaming .row-btn { display: none; }
 .empty { padding: 6px 22px 18px; color: var(--faint); font-size: 13px; }
 
 @keyframes fade {
@@ -1239,11 +1258,15 @@ header, .left, .right { animation: fade .45s ease both; }
   .item.pressing { background: var(--accent-bg); transition: background .25s ease; }
   .item.sel::before { display: none; }
   .row-tags { display: none; }
-  .item .refresh-btn,
-  .item.sel .refresh-btn,
-  .item:hover .refresh-btn { display: none; }
+  .item .row-btn,
+  .item.sel .row-btn,
+  .item:hover .row-btn { display: none; }
   .title { font-size: 14px; }
   .url { font-size: 11px; }
+  /* the row suppresses selection for the swipe gestures — the rename field has
+     to opt back in, and needs 16px type or iOS zooms the page on focus */
+  .item.renaming { user-select: auto; -webkit-user-select: auto; }
+  .title-input { font-size: 16px; }
 
   /* tag editor — full-width sheet */
   .tagbar {

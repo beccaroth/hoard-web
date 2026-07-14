@@ -17,9 +17,9 @@ import { initSync, whenSynced } from "./lib/sync.js";
 
 const KEYS = [
   { k: ["j", "k"], lab: "move" }, { k: ["o"], lab: "open" }, { k: ["c"], lab: "copy" },
-  { k: ["r"], lab: "refresh" }, { k: ["t"], lab: "tag" }, { k: ["s"], lab: "later" },
-  { k: ["a"], lab: "archive" }, { k: ["d"], lab: "delete" }, { k: ["u"], lab: "undo" },
-  { k: ["1-4"], lab: "views" }, { k: ["⌘k"], lab: "palette" },
+  { k: ["e"], lab: "rename" }, { k: ["r"], lab: "refresh" }, { k: ["t"], lab: "tag" },
+  { k: ["s"], lab: "later" }, { k: ["a"], lab: "archive" }, { k: ["d"], lab: "delete" },
+  { k: ["u"], lab: "undo" }, { k: ["1-4"], lab: "views" }, { k: ["⌘k"], lab: "palette" },
 ];
 
 export default function App() {
@@ -31,6 +31,7 @@ export default function App() {
   const selId = useHoard((s) => s.selId);
   const folded = useHoard((s) => s.folded);
   const editingId = useHoard((s) => s.editingId);
+  const renamingId = useHoard((s) => s.renamingId);
   const exportOpen = useHoard((s) => s.exportOpen);
   const status = useHoard((s) => s.status);
 
@@ -75,6 +76,12 @@ export default function App() {
     else if (!selId && visible.length) setSelId(visible[0].id);
   }, [visible, selId]);
 
+  // a row that scrolls out of the current view (filtered, moved, deleted) can't
+  // stay in rename mode — its input is gone
+  useEffect(() => {
+    if (renamingId && !visible.some((i) => i.id === renamingId)) useHoard.getState().setRenamingId(null);
+  }, [visible, renamingId]);
+
   // scroll the selection into view
   useEffect(() => {
     document.querySelector(".item.sel")?.scrollIntoView({ block: "nearest" });
@@ -106,6 +113,7 @@ export default function App() {
         case "k": case "ArrowUp": e.preventDefault(); s.moveSel(-1); break;
         case "o": case "Enter": e.preventDefault(); s.act("open"); break;
         case "c": e.preventDefault(); s.copyUrl(); break;
+        case "e": e.preventDefault(); if (s.selId) s.setRenamingId(s.selId); break;
         case "r": e.preventDefault(); if (s.selId) s.refresh(s.selId); break;
         case "s": e.preventDefault(); s.act("later"); break;
         case "a": e.preventDefault(); s.act("archived"); break;
@@ -120,6 +128,7 @@ export default function App() {
         case "Escape":
           if (s.exportOpen) s.setExportOpen(false);
           else if (s.editingId) s.setEditingId(null);
+          else if (s.renamingId) s.setRenamingId(null);
           else if (s.tagFilter) s.clearTagFilter();
           break;
         default: break;
@@ -348,10 +357,17 @@ export default function App() {
                         item={i}
                         selected={i.id === selId}
                         tagFilter={tagFilter}
+                        renaming={i.id === renamingId}
                         onSelect={() => useHoard.getState().setSelId(i.id)}
                         onOpen={() => window.open(i.url, "_blank")}
                         onFilterTag={(t) => useHoard.getState().toggleTagFilter(t)}
                         onRefresh={() => useHoard.getState().refresh(i.id)}
+                        onRenameStart={() => useHoard.getState().setRenamingId(i.id)}
+                        onRenameCommit={(title) => {
+                          useHoard.getState().renameItem(i.id, title);
+                          useHoard.getState().setRenamingId(null);
+                        }}
+                        onRenameCancel={() => useHoard.getState().setRenamingId(null)}
                         onSwipe={(action) => {
                           useHoard.getState().setSelId(i.id);
                           if (action === "tag") { useHoard.getState().setEditingId(i.id); return; }
@@ -386,6 +402,11 @@ export default function App() {
             onOpen={() => { window.open(it.url, "_blank"); setActionsId(null); }}
             onTag={() => {
               useHoard.getState().setEditingId(it.id);
+              setActionsId(null);
+            }}
+            onRename={() => {
+              useHoard.getState().setSelId(it.id);
+              useHoard.getState().setRenamingId(it.id);
               setActionsId(null);
             }}
             onRefresh={() => {

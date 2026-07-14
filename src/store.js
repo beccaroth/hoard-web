@@ -89,6 +89,7 @@ export const useHoard = create(
       sort: "newest",
       folded: false,
       editingId: null,
+      renamingId: null,
       exportOpen: false,
       status: "",
       // sync status — non-persisted, driven by lib/sync.js
@@ -107,22 +108,28 @@ export const useHoard = create(
       clearTagFilter: () => set({ tagFilter: null, selId: null }),
       toggleFolded: () => set((s) => ({ folded: !s.folded })),
       setEditingId: (editingId) => set({ editingId }),
+      setRenamingId: (renamingId) => set({ renamingId }),
       setExportOpen: (exportOpen) => set({ exportOpen }),
       setStatus: (status) => set({ status }),
 
       // ---- metadata enrichment ----
-      // `keepTitle` preserves a caller-supplied title (e.g. the real page title
-      // sent by the bookmarklet) while still upgrading the favicon.
+      // The fetch is slow enough to land after the user has moved on, so the
+      // title is only taken when nobody has a better claim on it. It's held when
+      // the caller supplied a real one (`keepTitle` — e.g. the bookmarklet's page
+      // title), when the user has typed their own (`titleEdited`), or while the
+      // row's rename editor is open, since that editor seeded its draft from the
+      // current title and swapping it underneath would land a merged or stale
+      // title on commit. The favicon is always upgraded either way.
       enrich: async (id, url, { keepTitle = false } = {}) => {
         set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, loading: true } : i)) }));
         try {
           const data = await fetchMeta(url);
           set((s) => ({
-            items: s.items.map((i) =>
-              i.id === id
-                ? { ...i, title: keepTitle ? i.title : (data.title || i.title), favicon: data.favicon || i.favicon, loading: false, updatedAt: Date.now() }
-                : i
-            ),
+            items: s.items.map((i) => {
+              if (i.id !== id) return i;
+              const hold = keepTitle || i.titleEdited || s.renamingId === id;
+              return { ...i, title: hold ? i.title : (data.title || i.title), favicon: data.favicon || i.favicon, loading: false, updatedAt: Date.now() };
+            }),
           }));
         } catch {
           set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, loading: false } : i)) }));
@@ -225,6 +232,14 @@ export const useHoard = create(
             selId: last.item.id,
             status: "Undone.",
           });
+        } else if (last.type === "rename") {
+          set({
+            items: items.map((i) =>
+              i.id === last.id ? { ...i, title: last.prevTitle, titleEdited: last.prevEdited, updatedAt: Date.now() } : i
+            ),
+            selId: last.id,
+            status: "Undone.",
+          });
         } else {
           set({ items: items.map((i) => (i.id === last.id ? { ...i, state: last.prevState, updatedAt: Date.now() } : i)), selId: last.id, status: "Undone." });
         }
@@ -251,12 +266,31 @@ export const useHoard = create(
         }
       },
 
+      // Explicit "refresh title & favicon" — also the way back from a manual
+      // rename, so it drops `titleEdited` and lets enrich re-apply the page title.
       refresh: (id) => {
         const item = get().items.find((i) => i.id === id);
         if (!item || item.loading) return;
-        set({ selId: id });
+        if (item.titleEdited) undoStack.push({ type: "rename", id, prevTitle: item.title, prevEdited: true });
+        set((s) => ({
+          items: s.items.map((i) => (i.id === id ? { ...i, titleEdited: false } : i)),
+          selId: id,
+        }));
         toast("Refreshing", { description: item.url });
         get().enrich(id, item.url);
+      },
+
+      // ---- rename ----
+      renameItem: (id, raw) => {
+        const title = (raw || "").trim();
+        const item = get().items.find((i) => i.id === id);
+        if (!item || !title || title === item.title) return;
+        undoStack.push({ type: "rename", id, prevTitle: item.title, prevEdited: Boolean(item.titleEdited) });
+        set((s) => ({
+          items: s.items.map((i) => (i.id === id ? { ...i, title, titleEdited: true, updatedAt: Date.now() } : i)),
+          status: "Renamed. Press u to undo.",
+        }));
+        toast("Renamed", { description: title, action: { label: "Undo", onClick: () => get().undo() } });
       },
 
       // ---- tags ----

@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { RotateCw, Clock, Archive, Tag, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { RotateCw, Pencil, Clock, Archive, Tag, Trash2 } from "lucide-react";
 
 // Swipe thresholds as a fraction of the row width: short commit fires the
 // primary action, long commit the secondary. Measured per-gesture so the feel
@@ -16,13 +16,55 @@ function isMobile() {
   return typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
 }
 
-export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFilterTag, onRefresh, onSwipe, onLongPress }) {
+export default function Row({
+  item, selected, tagFilter, renaming,
+  onSelect, onOpen, onFilterTag, onRefresh, onSwipe, onLongPress,
+  onRenameStart, onRenameCommit, onRenameCancel,
+}) {
   const innerRef = useRef(null);
   const bgRef = useRef(null);
+  const nameRef = useRef(null);
+  const cancelledRef = useRef(false);
+  const [draft, setDraft] = useState(item.title);
   const t = useRef({
     x0: 0, y0: 0, dx: 0, dy: 0, t0: 0,
     swiping: false, longPressTimer: null, pressVisualTimer: null, suppressClick: false,
   });
+
+  // Entering rename mode seeds the field from the current title and selects it,
+  // so typing replaces and clicking lands the caret where you clicked. The
+  // focus/select is deferred a frame: when rename starts from the pencil the
+  // browser is still finishing that click, and settling focus afterwards would
+  // collapse the selection to the end of the field.
+  useEffect(() => {
+    if (!renaming) return;
+    cancelledRef.current = false;
+    setDraft(item.title);
+    const frame = requestAnimationFrame(() => {
+      const el = nameRef.current;
+      if (!el) return;
+      el.focus();
+      el.select();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [renaming, item.id]);
+
+  // Clicking away saves; Escape throws the edit away. The flag keeps a blur
+  // fired while the cancelled input unmounts from resurrecting the draft.
+  function commitRename() {
+    if (cancelledRef.current) return;
+    onRenameCommit?.(draft);
+  }
+
+  function onNameKeyDown(e) {
+    e.stopPropagation();
+    if (e.key === "Enter") { e.preventDefault(); commitRename(); }
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelledRef.current = true;
+      onRenameCancel?.();
+    }
+  }
 
   function clearPressVisual() {
     clearTimeout(t.current.pressVisualTimer);
@@ -64,7 +106,7 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
   }
 
   function onTouchStart(e) {
-    if (!isMobile()) return;
+    if (!isMobile() || renaming) return;
     const touch = e.touches[0];
     t.current.x0 = touch.clientX;
     t.current.y0 = touch.clientY;
@@ -93,7 +135,7 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
   }
 
   function onTouchMove(e) {
-    if (!isMobile()) return;
+    if (!isMobile() || renaming) return;
     const touch = e.touches[0];
     const dx = touch.clientX - t.current.x0;
     const dy = touch.clientY - t.current.y0;
@@ -120,7 +162,7 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
   }
 
   function onTouchEnd() {
-    if (!isMobile()) return;
+    if (!isMobile() || renaming) return;
     clearTimeout(t.current.longPressTimer);
     clearPressVisual();
     const { dx, dy, swiping, t0 } = t.current;
@@ -174,9 +216,9 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
       </div>
       <div
         ref={innerRef}
-        className={"item" + (selected ? " sel" : "")}
+        className={"item" + (selected ? " sel" : "") + (renaming ? " renaming" : "")}
         onClick={handleClick}
-        onDoubleClick={onOpen}
+        onDoubleClick={renaming ? undefined : onOpen}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -189,7 +231,23 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
           onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
         />
         <div className="meta">
-          <div className="title">{item.title}</div>
+          {renaming ? (
+            <input
+              ref={nameRef}
+              className="title-input"
+              value={draft}
+              aria-label="Listing title"
+              autoComplete="off"
+              spellCheck="false"
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={onNameKeyDown}
+              onBlur={commitRename}
+              onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <div className="title" title={item.title}>{item.title}</div>
+          )}
           <div className="url">{item.url}</div>
         </div>
 
@@ -215,8 +273,19 @@ export default function Row({ item, selected, tagFilter, onSelect, onOpen, onFil
               ? <span className="badge archived">archived</span>
               : null}
 
+        {!renaming && (
+          <button
+            className="row-btn rename-btn"
+            title="Rename (e)"
+            aria-label="Rename"
+            onClick={(e) => { e.stopPropagation(); onSelect(); onRenameStart?.(); }}
+          >
+            <Pencil size={14} strokeWidth={2.2} />
+          </button>
+        )}
+
         <button
-          className="refresh-btn"
+          className="row-btn refresh-btn"
           title="Refresh title & favicon (r)"
           disabled={item.loading}
           onClick={(e) => { e.stopPropagation(); onRefresh(); }}
