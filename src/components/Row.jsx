@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { RotateCw, Pencil, Clock, Archive, Tag, Trash2 } from "lucide-react";
+import { RotateCw, Pencil, Clock, Archive, Tag, Trash2, MoreHorizontal } from "lucide-react";
 
 // Swipe thresholds as a fraction of the row width: short commit fires the
 // primary action, long commit the secondary. Measured per-gesture so the feel
@@ -12,13 +12,16 @@ const SWIPE_THRESH = 10;
 const LONG_PRESS_MS = 500;
 const PRESS_VISUAL_MS = 200;
 
-function isMobile() {
-  return typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
+// Gestures key off the input device, not the window width: a tablet is wide
+// enough for the two-pane layout but still has no hover and no keyboard, so it
+// needs the same swipe / long-press affordances as a phone.
+function isTouch() {
+  return typeof window !== "undefined" && window.matchMedia("(hover: none) and (pointer: coarse)").matches;
 }
 
 export default function Row({
   item, selected, tagFilter, renaming,
-  onSelect, onOpen, onFilterTag, onRefresh, onSwipe, onLongPress,
+  onSelect, onOpen, onFilterTag, onRefresh, onSwipe, onActions,
   onRenameStart, onRenameCommit, onRenameCancel,
 }) {
   const innerRef = useRef(null);
@@ -106,7 +109,14 @@ export default function Row({
   }
 
   function onTouchStart(e) {
-    if (!isMobile() || renaming) return;
+    if (!isTouch() || renaming) return;
+    // A tap that lands on one of the row's own controls belongs to that
+    // control — don't let it start a swipe or count as a tap-to-open. The
+    // suppression flag still resets, so a bailed-out gesture can't swallow the
+    // next tap on the row.
+    t.current.suppressClick = false;
+    t.current.ignore = !!e.target.closest("button, input, .chip");
+    if (t.current.ignore) return;
     const touch = e.touches[0];
     t.current.x0 = touch.clientX;
     t.current.y0 = touch.clientY;
@@ -129,13 +139,13 @@ export default function Row({
         t.current.suppressClick = true;
         try { navigator.vibrate?.(8); } catch {}
         clearPressVisual();
-        onLongPress?.();
+        onActions?.();
       }
     }, LONG_PRESS_MS);
   }
 
   function onTouchMove(e) {
-    if (!isMobile() || renaming) return;
+    if (!isTouch() || renaming || t.current.ignore) return;
     const touch = e.touches[0];
     const dx = touch.clientX - t.current.x0;
     const dy = touch.clientY - t.current.y0;
@@ -162,7 +172,7 @@ export default function Row({
   }
 
   function onTouchEnd() {
-    if (!isMobile() || renaming) return;
+    if (!isTouch() || renaming || t.current.ignore) return;
     clearTimeout(t.current.longPressTimer);
     clearPressVisual();
     const { dx, dy, swiping, t0 } = t.current;
@@ -292,6 +302,19 @@ export default function Row({
         >
           <RotateCw size={14} strokeWidth={2.2} />
         </button>
+
+        {/* The same sheet long-press opens — the tappable way in on touch
+            devices, where there's no hover and no keyboard shortcuts. */}
+        {!renaming && (
+          <button
+            className="row-btn more-btn"
+            title="More actions"
+            aria-label="More actions"
+            onClick={(e) => { e.stopPropagation(); onSelect(); onActions?.(); }}
+          >
+            <MoreHorizontal size={14} strokeWidth={2.2} />
+          </button>
+        )}
       </div>
     </div>
   );

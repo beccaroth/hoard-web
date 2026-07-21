@@ -373,7 +373,7 @@ export default function App() {
                           if (action === "tag") { useHoard.getState().setEditingId(i.id); return; }
                           useHoard.getState().act(action);
                         }}
-                        onLongPress={() => setActionsId(i.id)}
+                        onActions={() => setActionsId(i.id)}
                       />
                     ))}
               </div>

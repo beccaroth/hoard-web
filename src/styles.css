@@ -110,7 +110,10 @@ header {
 .brand h1 { font-size: 19px; font-weight: 750; letter-spacing: -.02em; margin: 0; }
 .header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .header-right .btn-ghost { padding: 7px 14px; font-size: 12.5px; }
-.legend { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+/* Never wrapped: the full strip is ~965px, so it's shown only at widths that
+   fit it on one line (see the responsive block) and collapses to the keyboard
+   button below that. */
+.legend { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
 .legend .pair {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 11px 5px 7px;
@@ -530,10 +533,27 @@ button {
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border-2);
 }
-.tabs-left { display: flex; gap: 4px; flex-wrap: wrap; }
+/* Scrolls sideways rather than wrapping: how much room the strip has depends
+   on the deposit panel being open as much as on the window width, and a view
+   name broken across two lines re-flows the whole catalog header. */
+.tabs-left {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  min-width: 0;
+  flex: 1;
+  /* Fades the cut edge so a half-visible tab reads as "scroll for more".
+     Self-hiding: with room to spare nothing reaches the faded strip. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+}
+.tabs-left::-webkit-scrollbar { display: none; }
 .tabs-left .tab svg { color: var(--faint); flex-shrink: 0; }
 .tabs-left .tab.active svg { color: var(--accent-2); }
-.tabs-right { display: flex; align-items: center; gap: 8px; }
+.tabs-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .search-wrap { position: relative; display: flex; align-items: center; }
 .search-icon {
   position: absolute;
@@ -577,6 +597,8 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
   font-family: var(--sans);
   font-size: 13px;
   font-weight: 600;
@@ -808,7 +830,9 @@ header, .left, .right { animation: fade .45s ease both; }
 .tagbar {
   position: fixed;
   left: 50%;
-  bottom: 26px;
+  /* --kb-inset is set by TagEditor to however much of the viewport the
+     software keyboard is covering (0 when there isn't one) */
+  bottom: calc(26px + var(--kb-inset, 0px));
   transform: translate(-50%, 16px);
   display: flex;
   align-items: center;
@@ -1172,13 +1196,56 @@ header, .left, .right { animation: fade .45s ease both; }
 .help-keys { display: inline-flex; gap: 4px; }
 .help-lab { font-size: 13px; color: var(--muted); font-weight: 500; }
 
-/* ---------- responsive: mobile (≤760px) ---------- */
-@media (max-width: 760px) {
+/* ---------- responsive: shortcut legend ----------
+   The legend plus the brand and the right-hand controls need ~1400px. Below
+   that it would wrap into a second header row, so it folds into the keyboard
+   button, which opens the same list as a modal. */
+@media (max-width: 1400px) {
+  .legend { display: none; }
+  .legend-trigger.icon-btn { display: inline-flex; }
+}
+
+/* ---------- responsive: touch devices ----------
+   Keyed off the pointer rather than the width so tablets — wide enough to keep
+   the two-pane layout — still get the phone's gestures. Without hover there's
+   nothing to reveal the per-row controls, so the row keeps a single always-on
+   overflow button and everything else lives in the actions sheet. */
+@media (hover: none) and (pointer: coarse) {
+  .item-row { overflow: hidden; }
+  .swipe-bg { display: flex; }
+  .item {
+    touch-action: pan-y;
+    user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .item.pressing { background: var(--accent-bg); transition: background .25s ease; }
+  /* the row suppresses selection for the swipe gestures — the rename field has
+     to opt back in, and needs 16px type or iOS zooms the page on focus */
+  .item.renaming { user-select: auto; -webkit-user-select: auto; }
+  .title-input { font-size: 16px; }
+
+  .item .rename-btn, .item.sel .rename-btn, .item:hover .rename-btn,
+  .item .refresh-btn, .item.sel .refresh-btn, .item:hover .refresh-btn { display: none; }
+  .item .more-btn { display: grid; }
+  .row-btn { width: 32px; height: 32px; }
+
+  /* the actions sheet sits mid-screen on a tablet — the bottom edge of a 1024pt
+     display is a reach, and there's room to show it as a plain dialog */
+  .row-actions-backdrop { align-items: center; }
+  .row-actions-sheet {
+    border-radius: 16px;
+    padding-bottom: 14px;
+    margin: 0 12px;
+  }
+}
+
+/* ---------- responsive: single column (≤900px) ----------
+   Phones and tablets in portrait: the deposit panel can't hold a column of its
+   own, so it becomes a bottom sheet behind the add button. */
+@media (max-width: 900px) {
   header { padding: 12px 14px; gap: 12px; }
   .header-right { gap: 8px; }
   .header-right .btn-ghost { padding: 7px 10px; }
-  .legend { display: none; }
-  .legend-trigger.icon-btn { display: inline-flex; }
   .fold-btn { display: none; }
 
   main {
@@ -1231,48 +1298,23 @@ header, .left, .right { animation: fade .45s ease both; }
   /* catalog */
   .right { border-radius: 12px; }
   .tabs { padding: 10px 12px; gap: 6px; }
-  .tabs-left {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    min-width: 0;
-    flex: 1;
-  }
-  .tabs-left::-webkit-scrollbar { display: none; }
-  .tab {
-    padding: 7px 10px;
-    font-size: 12.5px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .tabs-right { flex-shrink: 0; }
+  .tab { padding: 7px 10px; font-size: 12.5px; }
   .tab.sort-toggle .sort-label { display: none; }
   .search { width: 130px; }
   .search:focus { width: 150px; }
   .section-title { top: 47px; padding: 14px 14px 7px; }
 
-  .item-row { overflow: hidden; }
-  .swipe-bg { display: flex; inset: 1px 6px; }
-  .item { margin: 1px 6px; padding: 10px; gap: 10px; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
-  .item.pressing { background: var(--accent-bg); transition: background .25s ease; }
+  .swipe-bg { inset: 1px 6px; }
+  .item { margin: 1px 6px; padding: 10px; gap: 10px; }
   .item.sel::before { display: none; }
-  .row-tags { display: none; }
-  .item .row-btn,
-  .item.sel .row-btn,
-  .item:hover .row-btn { display: none; }
   .title { font-size: 14px; }
   .url { font-size: 11px; }
-  /* the row suppresses selection for the swipe gestures — the rename field has
-     to opt back in, and needs 16px type or iOS zooms the page on focus */
-  .item.renaming { user-select: auto; -webkit-user-select: auto; }
-  .title-input { font-size: 16px; }
 
   /* tag editor — full-width sheet */
   .tagbar {
     left: 8px;
     right: 8px;
-    bottom: calc(8px + env(safe-area-inset-bottom));
+    bottom: calc(8px + env(safe-area-inset-bottom) + var(--kb-inset, 0px));
     transform: translateY(16px);
     max-width: none;
     flex-wrap: wrap;
@@ -1286,4 +1328,11 @@ header, .left, .right { animation: fade .45s ease both; }
   .cmdk-backdrop { padding: 6vh 12px 0; }
   .cmdk { max-height: 80vh; }
   .cmdk-title { max-width: 50%; }
+}
+
+/* ---------- responsive: phone (≤640px) ----------
+   Only this narrow does a row run out of room for its tags; a tablet in
+   portrait keeps them. */
+@media (max-width: 640px) {
+  .row-tags { display: none; }
 }
