@@ -1,5 +1,33 @@
 import { useEffect, useRef, useState } from "react";
 import { RotateCw, Pencil, Clock, Archive, Tag, Trash2, MoreHorizontal } from "lucide-react";
+import { domain } from "../lib/urls.js";
+
+// "2h ago" beats a raw timestamp in a row you're skimming.
+function ago(ts) {
+  if (!ts) return "";
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if (s < 90) return "just now";
+  const m = s / 60;
+  if (m < 60) return `${Math.round(m)}m ago`;
+  const h = m / 60;
+  if (h < 24) return `${Math.round(h)}h ago`;
+  const d = h / 24;
+  if (d < 7) return `${Math.round(d)}d ago`;
+  if (d < 365) return `${Math.round(d / 7)}w ago`;
+  return `${Math.round(d / 365)}y ago`;
+}
+
+// The bit of the URL that isn't the hostname — shown only on the selected row,
+// since a truncated path told you nothing the domain didn't.
+function pathOf(url) {
+  try {
+    const u = new URL(url);
+    const rest = u.pathname.replace(/\/$/, "") + u.search;
+    return rest && rest !== "/" ? rest : "";
+  } catch {
+    return "";
+  }
+}
 
 // Swipe thresholds as a fraction of the row width: short commit fires the
 // primary action, long commit the secondary. Measured per-gesture so the feel
@@ -234,12 +262,19 @@ export default function Row({
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchCancel}
       >
-        <img
-          className="fav"
-          src={item.favicon}
-          alt=""
-          onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
-        />
+        {/* The letter-mark sits underneath and shows through when the favicon
+            fails, instead of leaving the blank gap it used to. */}
+        <div className="fav-well">
+          <span className="fav-letter">{(domain(item.url)[0] || "?").toUpperCase()}</span>
+          {item.favicon && (
+            <img
+              className="fav"
+              src={item.favicon}
+              alt=""
+              onError={(e) => { e.currentTarget.remove(); }}
+            />
+          )}
+        </div>
         <div className="meta">
           {renaming ? (
             <input
@@ -258,7 +293,17 @@ export default function Row({
           ) : (
             <div className="title" title={item.title}>{item.title}</div>
           )}
-          <div className="url">{item.url}</div>
+          <div className="url" title={item.url}>
+            <span className="dom">{domain(item.url)}</span>
+            <span className="sep">·</span>
+            <span className="when">{ago(item.added)}</span>
+            {selected && pathOf(item.url) && (
+              <>
+                <span className="sep">·</span>
+                <span className="path">{pathOf(item.url)}</span>
+              </>
+            )}
+          </div>
         </div>
 
         {item.tags && item.tags.length > 0 && (
@@ -278,9 +323,9 @@ export default function Row({
         {item.loading
           ? <span className="spin">reading…</span>
           : item.state === "later"
-            ? <span className="badge later">later</span>
+            ? <span className="badge later">Later</span>
             : item.state === "archived"
-              ? <span className="badge archived">archived</span>
+              ? <span className="badge archived">Kept</span>
               : null}
 
         {!renaming && (
