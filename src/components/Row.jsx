@@ -325,7 +325,7 @@ export default function Row({
           : item.state === "later"
             ? <span className="badge later">Later</span>
             : item.state === "archived"
-              ? <span className="badge archived">Kept</span>
+              ? <span className="badge archived">Archived</span>
               : null}
 
         {!renaming && (

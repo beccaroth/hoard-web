@@ -33,6 +33,39 @@ const EMPTY = {
 };
 const EMPTY_HOARD = { line: "The hoard is empty.", how: <>press <kbd>N</kbd> to stash your first link</> };
 
+// The bookmarklet opens a tab purely to hand a link over, and until now that
+// tab just sat there — stash ten things and you have ten Hoard tabs. It can
+// close itself, but not before the link is actually safe: the push to Supabase
+// is debounced 800ms and then takes a round-trip, so closing on a timer would
+// strand the item in this browser's localStorage. So we wait for a sync that
+// completes *after* the add (syncState is already "synced" from the sign-in
+// pull, hence the lastSyncAt comparison), and if it errors or never lands we
+// deliberately leave the tab open — it's the thing that will retry.
+const CLOSE_MIN_VISIBLE_MS = 1000; // long enough to read the confirmation
+const CLOSE_GIVE_UP_MS = 8000;
+
+function closeWhenSafe({ needsPush }) {
+  const addedAt = Date.now();
+  const closeSoon = () =>
+    setTimeout(() => window.close(), Math.max(0, CLOSE_MIN_VISIBLE_MS - (Date.now() - addedAt)));
+
+  const settled = () => {
+    const { syncState, lastSyncAt } = useHoard.getState();
+    // "idle" means no account or no Supabase configured — nothing to wait for.
+    if (syncState === "idle") return true;
+    return syncState === "synced" && (lastSyncAt || 0) > addedAt;
+  };
+
+  // A duplicate changes nothing, so there's no push to wait on.
+  if (!needsPush || settled()) { closeSoon(); return; }
+
+  const unsub = useHoard.subscribe(
+    (s) => [s.syncState, s.lastSyncAt].join(":"),
+    () => { if (settled()) { unsub(); clearTimeout(giveUp); closeSoon(); } },
+  );
+  const giveUp = setTimeout(unsub, CLOSE_GIVE_UP_MS);
+}
+
 export default function App() {
   const items = useHoard((s) => s.items);
   const view = useHoard((s) => s.view);
@@ -63,8 +96,15 @@ export default function App() {
     const url = params.get("add") || params.get("url");
     if (!url) return;
     const title = params.get("title") || "";
+    // Only a script-opened window may close itself, which is exactly the
+    // bookmarklet's tab. The iOS Shortcut navigates Safari here instead, so it
+    // has no opener and the tab correctly stays put.
+    const fromBookmarklet = Boolean(window.opener);
     window.history.replaceState(null, "", window.location.pathname + window.location.hash);
-    whenSynced(() => useHoard.getState().quickAdd({ url, title }));
+    whenSynced(() => {
+      const filed = useHoard.getState().quickAdd({ url, title });
+      if (fromBookmarklet) closeWhenSafe({ needsPush: filed });
+    });
   }, []);
 
   const visible = useMemo(() => selectVisible({ items, view, tagFilter, query, sort }), [items, view, tagFilter, query, sort]);

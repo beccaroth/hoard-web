@@ -924,15 +924,17 @@ button:disabled:hover { background: var(--accent); box-shadow: var(--shadow-sm);
   transition: opacity .15s ease;
 }
 .item.sel .url .path { opacity: 1; max-width: none; }
-/* State as a word in a fixed column, not a coloured pill in the flow. */
+/* State as a word in a fixed column, not a coloured pill in the flow. Sized to
+   the longest label ("Archived") so the column can't reflow between states. */
 .badge {
   font-family: var(--mono);
   font-size: 8.5px;
   font-weight: 400;
   letter-spacing: .14em;
   text-transform: uppercase;
+  white-space: nowrap;
   flex-shrink: 0;
-  width: 56px;
+  width: 68px;
   text-align: right;
 }
 .badge.later    { color: var(--amber); }
