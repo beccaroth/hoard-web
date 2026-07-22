@@ -132,9 +132,16 @@ export default function App() {
     if (renamingId && !visible.some((i) => i.id === renamingId)) useHoard.getState().setRenamingId(null);
   }, [visible, renamingId]);
 
-  // scroll the selection into view
+  // Scroll the selection into view, and take focus with it — but only when
+  // focus is already inside the catalog. Moving it unconditionally would yank
+  // the caret out of the search box on every j/k.
   useEffect(() => {
-    document.querySelector(".item.sel")?.scrollIntoView({ block: "nearest" });
+    const row = document.querySelector(".item.sel");
+    if (!row) return;
+    row.scrollIntoView({ block: "nearest" });
+    const active = document.activeElement;
+    const focusInList = active && active !== document.body && active.closest(".right");
+    if (focusInList && !row.contains(active)) row.focus({ preventScroll: true });
   }, [selId]);
 
   // close export menu on outside click
@@ -343,7 +350,7 @@ export default function App() {
             );
             if (!single && sec.key !== "inbox" && !secItems.length) return null;
             return (
-              <div key={sec.key}>
+              <div key={sec.key} role="list" aria-label={sec.label}>
                 {!single && (
                   <div className="section-title">
                     <span className="name">{sec.label}</span>

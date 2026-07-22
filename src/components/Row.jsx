@@ -244,8 +244,20 @@ export default function Row({
     onSelect();
   }
 
+  // Roving tab stop: only the selected row and its own controls are reachable
+  // with Tab. Making every row and every chip tabbable would mean well over a
+  // thousand stops in a hoard this size, which is worse than not being
+  // reachable at all.
+  const rove = selected ? 0 : -1;
+
+  // Without a name of its own the row would be announced as the concatenation
+  // of everything inside it — including its buttons ("…Filter by hn, Rename
+  // Ask HN…"). This says the useful part once.
+  const stateWord = item.state === "later" ? "saved for later" : item.state === "archived" ? "archived" : "";
+  const rowLabel = [item.title, domain(item.url), stateWord].filter(Boolean).join(", ");
+
   return (
-    <div className="item-row">
+    <div className="item-row" role="listitem">
       <div className="swipe-bg" ref={bgRef} aria-hidden="true">
         <span className="swipe-icon swipe-icon-later"><Clock size={16} /> Later</span>
         <span className="swipe-icon swipe-icon-tag"><Tag size={16} /> Tag</span>
@@ -255,6 +267,12 @@ export default function Row({
       <div
         ref={innerRef}
         className={"item" + (selected ? " sel" : "") + (renaming ? " renaming" : "")}
+        tabIndex={renaming ? -1 : rove}
+        aria-current={selected ? "true" : undefined}
+        aria-label={renaming ? undefined : rowLabel}
+        /* Tabbing to a row selects it, so keyboard focus and the app's own
+           selection can never disagree. */
+        onFocus={(e) => { if (e.target === e.currentTarget && !selected) onSelect(); }}
         onClick={handleClick}
         onDoubleClick={renaming ? undefined : onOpen}
         onTouchStart={onTouchStart}
@@ -309,13 +327,19 @@ export default function Row({
         {item.tags && item.tags.length > 0 && (
           <div className="row-tags">
             {item.tags.map((t) => (
-              <span
+              <button
                 key={t}
+                type="button"
                 className={"chip" + (t === tagFilter ? " active" : "")}
+                tabIndex={rove}
+                /* it toggles a filter rather than navigating, so pressed
+                   state is the honest thing to announce */
+                aria-pressed={t === tagFilter}
+                aria-label={`Filter by ${t}`}
                 onClick={(e) => { e.stopPropagation(); onFilterTag(t); }}
               >
                 {t}
-              </span>
+              </button>
             ))}
           </div>
         )}
@@ -332,7 +356,8 @@ export default function Row({
           <button
             className="row-btn rename-btn"
             title="Rename (e)"
-            aria-label="Rename"
+            aria-label={`Rename ${item.title}`}
+            tabIndex={rove}
             onClick={(e) => { e.stopPropagation(); onSelect(); onRenameStart?.(); }}
           >
             <Pencil size={14} strokeWidth={2.2} />
@@ -342,6 +367,8 @@ export default function Row({
         <button
           className="row-btn refresh-btn"
           title="Refresh title & favicon (r)"
+          aria-label={`Refresh title and favicon for ${item.title}`}
+          tabIndex={rove}
           disabled={item.loading}
           onClick={(e) => { e.stopPropagation(); onRefresh(); }}
         >
@@ -354,7 +381,9 @@ export default function Row({
           <button
             className="row-btn more-btn"
             title="More actions"
-            aria-label="More actions"
+            aria-label={`More actions for ${item.title}`}
+            aria-haspopup="dialog"
+            tabIndex={rove}
             onClick={(e) => { e.stopPropagation(); onSelect(); onActions?.(); }}
           >
             <MoreHorizontal size={14} strokeWidth={2.2} />

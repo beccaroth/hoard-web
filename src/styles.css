@@ -131,6 +131,12 @@ body::before {
   outline-offset: 2px;
   border-radius: 4px;
 }
+/* Rows run edge to edge, so an outset ring would be clipped by the card —
+   this one sits just inside instead. */
+.item:focus-visible {
+  outline-offset: -2px;
+  border-radius: 0;
+}
 
 /* ---------- header ---------- */
 header {
