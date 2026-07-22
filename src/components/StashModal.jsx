@@ -90,8 +90,10 @@ export default function StashModal({ existingUrls, onStash, onClose }) {
           </button>
         </div>
 
-        <div className="stash-faster">
-          <div className="lab">Faster ways to stash</div>
+        {/* Collapsed by default — it's a one-time thing to learn, not something
+            to read every time you paste a link. */}
+        <details className="stash-faster">
+          <summary className="lab">Faster ways to stash</summary>
           <div className="row-way">
             <a
               ref={bookmarkletRef}
@@ -107,7 +109,7 @@ export default function StashModal({ existingUrls, onStash, onClose }) {
             <b>iOS Shortcut</b>
             <span>— stash from the share sheet on iPhone &amp; iPad</span>
           </div>
-        </div>
+        </details>
       </div>
     </div>
   );

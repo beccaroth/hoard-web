@@ -209,7 +209,6 @@ export default function App() {
         <div className="brand">
           <span className="logo" aria-hidden="true" />
           <h1>Hoard</h1>
-          {items.length > 0 && <span className="kept">{items.length} kept</span>}
         </div>
         <div className="header-right">
           <button className="stash-btn" onClick={() => setStashOpen(true)}>
