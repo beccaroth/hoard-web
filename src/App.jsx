@@ -12,7 +12,7 @@ import AuthControl from "./components/AuthControl.jsx";
 import CommandPalette from "./components/CommandPalette.jsx";
 import SearchBox from "./components/SearchBox.jsx";
 import StashModal from "./components/StashModal.jsx";
-import ThemeToggle from "./components/ThemeToggle.jsx";
+import ThemeToggle, { readTheme } from "./components/ThemeToggle.jsx";
 import { useHoard, selectVisible, parseQuery, matchesItem, sortByAdded, SECTIONS } from "./store.js";
 import { normalizeUrl } from "./lib/urls.js";
 import { initSync, whenSynced } from "./lib/sync.js";
@@ -84,6 +84,9 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [stashOpen, setStashOpen] = useState(false);
   const [actionsId, setActionsId] = useState(null);
+  // Held here rather than inside the toggle so the toaster can wear the same
+  // theme — it was pinned dark, which looked wrong on the light palette.
+  const [theme, setTheme] = useState(readTheme);
 
   // auth + cross-device sync (no-op if Supabase env isn't configured)
   useEffect(() => initSync(setSession), []);
@@ -270,7 +273,7 @@ export default function App() {
           >
             <Keyboard size={15} />
           </button>
-          <ThemeToggle />
+          <ThemeToggle theme={theme} onChange={setTheme} />
           <AuthControl session={session} />
           <div className="export-wrap">
             <button className="btn-ghost icon-btn" title="Export current view"
@@ -508,7 +511,10 @@ export default function App() {
         </div>
       )}
 
-      <Toaster position="bottom-center" theme="dark" toastOptions={{ style: { fontFamily: "var(--sans)" } }} />
+      {/* Bottom-right keeps toasts clear of the tag editor, which docks
+          bottom-centre. Styling lives in styles.css so it reads from the
+          theme tokens rather than being frozen into inline styles. */}
+      <Toaster position="bottom-right" theme={theme} />
     </>
   );
 }

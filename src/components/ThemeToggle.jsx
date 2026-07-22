@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Sun, Moon, Monitor } from "lucide-react";
 
 const KEY = "hoard:theme";
 const ORDER = ["system", "light", "dark"];
 const CURRENT_LABEL = { system: "System", light: "Light", dark: "Dark" };
 
-function read() {
+// Exported because the toaster needs the same preference — sonner takes
+// "system" | "light" | "dark" directly, so the values line up.
+export function readTheme() {
   try {
     const t = localStorage.getItem(KEY);
     return t === "light" || t === "dark" ? t : "system";
@@ -14,7 +16,7 @@ function read() {
   }
 }
 
-function apply(theme) {
+export function applyTheme(theme) {
   const root = document.documentElement;
   if (theme === "system") delete root.dataset.theme;
   else root.dataset.theme = theme;
@@ -24,14 +26,12 @@ function apply(theme) {
   } catch {}
 }
 
-export default function ThemeToggle() {
-  const [theme, setTheme] = useState(read);
-
-  useEffect(() => { apply(theme); }, [theme]);
+export default function ThemeToggle({ theme, onChange }) {
+  useEffect(() => { applyTheme(theme); }, [theme]);
 
   function cycle() {
     const i = ORDER.indexOf(theme);
-    setTheme(ORDER[(i + 1) % ORDER.length]);
+    onChange(ORDER[(i + 1) % ORDER.length]);
   }
 
   const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length];

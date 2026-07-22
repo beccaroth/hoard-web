@@ -828,9 +828,78 @@ button:disabled:hover { background: var(--accent); box-shadow: var(--shadow-sm);
 .swipe-bg[data-dir="archive"] .swipe-icon-archive { display: inline-flex; }
 .swipe-bg[data-dir="delete"]  .swipe-icon-delete  { display: inline-flex; }
 
-/* Keep toasts below the modal layer (TagEditor 10001/2, RowActions 10003) so
-   the long-press actions panel sits over any visible notification toast. */
-[data-sonner-toaster] { z-index: 10000 !important; }
+/* ---------- toasts ----------
+   Kept below the modal layer (TagEditor 10001/2, RowActions 10003) so the
+   long-press actions panel sits over any visible toast.
+
+   Sonner injects its own stylesheet at runtime, which lands after this file
+   and would win on equal specificity — so every rule here is scoped through
+   the toaster to outrank it, rather than reaching for !important. */
+[data-sonner-toaster] {
+  z-index: 10000 !important;
+  --width: 340px;
+  --normal-bg: var(--surface);
+  --normal-border: var(--border);
+  --normal-text: var(--ink);
+}
+[data-sonner-toaster] [data-sonner-toast] {
+  font-family: var(--sans);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  /* the brass edge is the only ornament — it ties the toast to the selected
+     row, which is marked the same way */
+  border-left: 2px solid var(--accent-line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  padding: 12px 14px;
+  gap: 11px;
+}
+[data-sonner-toaster] [data-sonner-toast] [data-title] {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -.005em;
+  color: var(--ink);
+}
+/* Descriptions are almost always a URL or a count, so they get the mono. */
+[data-sonner-toaster] [data-sonner-toast] [data-description] {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  line-height: 1.5;
+  letter-spacing: .03em;
+  color: var(--muted);
+  margin-top: 4px;
+  word-break: break-all;
+}
+/* Undo, matched to the header's stash control so the two read as siblings. */
+[data-sonner-toaster] [data-sonner-toast] [data-button] {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-line);
+  border-radius: 4px;
+  padding: 6px 10px;
+  height: auto;
+  flex-shrink: 0;
+  transition: background .15s ease, color .15s ease;
+}
+[data-sonner-toaster] [data-sonner-toast] [data-button]:hover {
+  background: var(--accent-bg-strong);
+  color: var(--accent-2);
+}
+[data-sonner-toaster] [data-sonner-toast] [data-close-button] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+[data-sonner-toaster] [data-sonner-toast] [data-close-button]:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
 
 /* Rows run the full width of the card — a ledger inside a card, rather than
    a card inside a card. The selected row is marked by a rule on the leading
