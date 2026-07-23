@@ -461,7 +461,6 @@ export default function App() {
             { id: "v-inbox", label: "Go to Inbox", hint: "2", icon: <Inbox size={16} />, run: () => useHoard.getState().setView("inbox") },
             { id: "v-later", label: "Go to Saved for Later", hint: "3", icon: <Clock size={16} />, run: () => useHoard.getState().setView("later") },
             { id: "v-arch", label: "Go to Archived", hint: "4", icon: <Archive size={16} />, run: () => useHoard.getState().setView("archived") },
-            { id: "fold", label: "Toggle sidebar", hint: "[", icon: <PanelLeft size={16} />, run: () => useHoard.getState().toggleFolded() },
             { id: "x-urls", label: "Copy URLs (current view)", icon: <Copy size={16} />, run: () => exportAs("copy-urls") },
             { id: "x-md", label: "Copy as Markdown (current view)", icon: <FileText size={16} />, run: () => exportAs("copy-md") },
             { id: "x-json", label: "Download .json (current view)", icon: <Braces size={16} />, run: () => exportAs("json") },
