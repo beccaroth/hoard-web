@@ -310,6 +310,9 @@ export default function App() {
                 <button
                   key={t.key}
                   className={"tab" + (t.key === view ? " active" : "")}
+                  // the active view was conveyed only by colour + underline;
+                  // expose it to assistive tech too
+                  aria-current={t.key === view ? "page" : undefined}
                   title={`${t.label} (${t.n})`}
                   onClick={() => useHoard.getState().setView(t.key)}
                 >

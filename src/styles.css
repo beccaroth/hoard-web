@@ -663,7 +663,10 @@ button:disabled:hover { background: var(--accent); box-shadow: var(--shadow-sm);
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px 16px;
+  /* No bottom padding: the view tabs run to the strip's edge so the active
+     tab's underline lands on the separator instead of floating above it —
+     one rule with a bronze segment, not two parallel lines. */
+  padding: 12px 16px 0;
   background: var(--tabs-bg);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border-2);
@@ -1544,8 +1547,10 @@ header, .right { animation: fade .45s ease both; }
 
   /* catalog */
   .right { border-radius: 12px; }
-  .tabs { padding: 10px 12px; gap: 6px; }
-  .tab { padding: 7px 10px; font-size: 12.5px; }
+  .tabs { padding: 10px 12px 0; gap: 6px; }
+  /* keep the underline on the separator here too — vertical padding only,
+     so the tab's bottom border reaches the strip edge */
+  .tab { padding: 9px 0 8px; font-size: 12.5px; }
   .tab.sort-toggle .sort-label { display: none; }
   .search { width: 130px; }
   .search:focus { width: 150px; }
