@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Toaster, toast } from "sonner";
 import {
   Download, Upload, Copy, FileText, Braces,
@@ -347,7 +348,10 @@ export default function App() {
                 className="tab search-toggle"
                 aria-label="Search"
                 aria-expanded={searchOpen}
-                onClick={() => { setSearchOpen(true); requestAnimationFrame(() => searchRef.current?.focus()); }}
+                /* Flush the expand synchronously so the field is on-screen and
+                   we can focus it inside the same tap — iOS only raises the
+                   keyboard for a focus that happens within the gesture. */
+                onClick={() => { flushSync(() => setSearchOpen(true)); searchRef.current?.focus(); }}
               >
                 <Search size={14} />
               </button>
