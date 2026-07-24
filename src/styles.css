@@ -1540,6 +1540,9 @@ header, .right { animation: fade .45s ease both; }
      nothing to offer — hide it. Matches the ≤1400 selector's specificity so
      this wins. */
   .legend-trigger.icon-btn { display: none; }
+  /* Export collapses to its icon — the download glyph reads clearly enough,
+     and the word is the widest thing left in the header. */
+  .export-label { display: none; }
 
   main {
     grid-template-columns: 1fr;

@@ -289,7 +289,7 @@ export default function App() {
           <div className="export-wrap">
             <button className="btn-ghost icon-btn" title="Export current view"
               onClick={(e) => { e.stopPropagation(); useHoard.getState().setExportOpen(!exportOpen); }}>
-              <Download size={15} /> Export
+              <Download size={15} /> <span className="export-label">Export</span>
             </button>
             <div className={"menu" + (exportOpen ? " show" : "")}>
               <button onClick={() => exportAs("copy-urls")}><Copy size={15} /> Copy URLs</button>
