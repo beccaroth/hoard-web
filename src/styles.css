@@ -1527,6 +1527,11 @@ header, .right { animation: fade .45s ease both; }
   header { padding: 12px 14px; gap: 12px; }
   .header-right { gap: 8px; }
   .header-right .btn-ghost { padding: 7px 10px; }
+  /* The header stash button and the floating one say the same thing; with the
+     FAB present the header control is pure width, and dropping it lets the
+     remaining icons sit on one line beside the logo instead of wrapping under
+     it. */
+  .stash-btn { display: none; }
 
   main {
     grid-template-columns: 1fr;
@@ -1547,14 +1552,18 @@ header, .right { animation: fade .45s ease both; }
 
   /* catalog */
   .right { border-radius: 12px; }
-  .tabs { padding: 10px 12px 0; gap: 6px; }
-  /* keep the underline on the separator here too — vertical padding only,
-     so the tab's bottom border reaches the strip edge */
+  /* Two rows: the view tabs scroll along the top, and the sort + search
+     controls drop to their own line below, so neither has to fight the other
+     for the ~180px a single strip left them. */
+  .tabs { padding: 8px 12px 10px; gap: 6px; flex-wrap: wrap; }
+  .tabs-left { flex: 1 0 100%; }
+  .tabs-right { flex: 1 0 100%; }
+  .tabs-right .search-wrap { flex: 1; }
   .tab { padding: 9px 0 8px; font-size: 12.5px; }
   .tab.sort-toggle .sort-label { display: none; }
-  .search { width: 130px; }
-  .search:focus { width: 150px; }
-  .section-title { top: 47px; padding: 14px 14px 7px; }
+  /* Fills the rest of its row rather than sitting at a fixed width. */
+  .search, .search:focus { width: 100%; }
+  .section-title { top: 93px; padding: 14px 14px 7px; }
 
   .item { padding: 10px 14px; gap: 10px; }
   .title { font-size: 14px; }
@@ -1578,6 +1587,16 @@ header, .right { animation: fade .45s ease both; }
   .cmdk-backdrop { padding: 6vh 12px 0; }
   .cmdk { max-height: 80vh; }
   .cmdk-title { max-width: 50%; }
+
+  /* row actions — float the sheet as a rounded card with room on either side
+     rather than running it edge to edge. The touch query centres it on
+     tablets; here we keep it anchored to the bottom where a thumb can reach. */
+  .row-actions-backdrop { align-items: flex-end; }
+  .row-actions-sheet {
+    margin: 0 10px calc(10px + env(safe-area-inset-bottom));
+    border-radius: 18px;
+    padding-bottom: 14px;
+  }
 }
 
 /* ---------- responsive: phone (≤640px) ----------
