@@ -1536,6 +1536,10 @@ header, .right { animation: fade .45s ease both; }
      remaining icons sit on one line beside the logo instead of wrapping under
      it. */
   .stash-btn { display: none; }
+  /* No hardware keyboard here, so the shortcuts button (and its dialog) has
+     nothing to offer — hide it. Matches the ≤1400 selector's specificity so
+     this wins. */
+  .legend-trigger.icon-btn { display: none; }
 
   main {
     grid-template-columns: 1fr;
