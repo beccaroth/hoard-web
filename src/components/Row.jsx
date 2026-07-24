@@ -1,5 +1,33 @@
 import { useEffect, useRef, useState } from "react";
-import { RotateCw, Pencil, Clock, Archive, Tag, Trash2 } from "lucide-react";
+import { RotateCw, Pencil, Clock, Archive, Tag, Trash2, MoreHorizontal } from "lucide-react";
+import { domain } from "../lib/urls.js";
+
+// "2h ago" beats a raw timestamp in a row you're skimming.
+function ago(ts) {
+  if (!ts) return "";
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if (s < 90) return "just now";
+  const m = s / 60;
+  if (m < 60) return `${Math.round(m)}m ago`;
+  const h = m / 60;
+  if (h < 24) return `${Math.round(h)}h ago`;
+  const d = h / 24;
+  if (d < 7) return `${Math.round(d)}d ago`;
+  if (d < 365) return `${Math.round(d / 7)}w ago`;
+  return `${Math.round(d / 365)}y ago`;
+}
+
+// The bit of the URL that isn't the hostname — shown only on the selected row,
+// since a truncated path told you nothing the domain didn't.
+function pathOf(url) {
+  try {
+    const u = new URL(url);
+    const rest = u.pathname.replace(/\/$/, "") + u.search;
+    return rest && rest !== "/" ? rest : "";
+  } catch {
+    return "";
+  }
+}
 
 // Swipe thresholds as a fraction of the row width: short commit fires the
 // primary action, long commit the secondary. Measured per-gesture so the feel
@@ -12,13 +40,16 @@ const SWIPE_THRESH = 10;
 const LONG_PRESS_MS = 500;
 const PRESS_VISUAL_MS = 200;
 
-function isMobile() {
-  return typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
+// Gestures key off the input device, not the window width: a tablet is wide
+// enough for the two-pane layout but still has no hover and no keyboard, so it
+// needs the same swipe / long-press affordances as a phone.
+function isTouch() {
+  return typeof window !== "undefined" && window.matchMedia("(hover: none) and (pointer: coarse)").matches;
 }
 
 export default function Row({
   item, selected, tagFilter, renaming,
-  onSelect, onOpen, onFilterTag, onRefresh, onSwipe, onLongPress,
+  onSelect, onOpen, onFilterTag, onRefresh, onSwipe, onActions,
   onRenameStart, onRenameCommit, onRenameCancel,
 }) {
   const innerRef = useRef(null);
@@ -106,7 +137,14 @@ export default function Row({
   }
 
   function onTouchStart(e) {
-    if (!isMobile() || renaming) return;
+    if (!isTouch() || renaming) return;
+    // A tap that lands on one of the row's own controls belongs to that
+    // control — don't let it start a swipe or count as a tap-to-open. The
+    // suppression flag still resets, so a bailed-out gesture can't swallow the
+    // next tap on the row.
+    t.current.suppressClick = false;
+    t.current.ignore = !!e.target.closest("button, input, .chip");
+    if (t.current.ignore) return;
     const touch = e.touches[0];
     t.current.x0 = touch.clientX;
     t.current.y0 = touch.clientY;
@@ -129,13 +167,13 @@ export default function Row({
         t.current.suppressClick = true;
         try { navigator.vibrate?.(8); } catch {}
         clearPressVisual();
-        onLongPress?.();
+        onActions?.();
       }
     }, LONG_PRESS_MS);
   }
 
   function onTouchMove(e) {
-    if (!isMobile() || renaming) return;
+    if (!isTouch() || renaming || t.current.ignore) return;
     const touch = e.touches[0];
     const dx = touch.clientX - t.current.x0;
     const dy = touch.clientY - t.current.y0;
@@ -162,7 +200,7 @@ export default function Row({
   }
 
   function onTouchEnd() {
-    if (!isMobile() || renaming) return;
+    if (!isTouch() || renaming || t.current.ignore) return;
     clearTimeout(t.current.longPressTimer);
     clearPressVisual();
     const { dx, dy, swiping, t0 } = t.current;
@@ -206,8 +244,20 @@ export default function Row({
     onSelect();
   }
 
+  // Roving tab stop: only the selected row and its own controls are reachable
+  // with Tab. Making every row and every chip tabbable would mean well over a
+  // thousand stops in a hoard this size, which is worse than not being
+  // reachable at all.
+  const rove = selected ? 0 : -1;
+
+  // Without a name of its own the row would be announced as the concatenation
+  // of everything inside it — including its buttons ("…Filter by hn, Rename
+  // Ask HN…"). This says the useful part once.
+  const stateWord = item.state === "later" ? "saved for later" : item.state === "archived" ? "archived" : "";
+  const rowLabel = [item.title, domain(item.url), stateWord].filter(Boolean).join(", ");
+
   return (
-    <div className="item-row">
+    <div className="item-row" role="listitem">
       <div className="swipe-bg" ref={bgRef} aria-hidden="true">
         <span className="swipe-icon swipe-icon-later"><Clock size={16} /> Later</span>
         <span className="swipe-icon swipe-icon-tag"><Tag size={16} /> Tag</span>
@@ -217,6 +267,12 @@ export default function Row({
       <div
         ref={innerRef}
         className={"item" + (selected ? " sel" : "") + (renaming ? " renaming" : "")}
+        tabIndex={renaming ? -1 : rove}
+        aria-current={selected ? "true" : undefined}
+        aria-label={renaming ? undefined : rowLabel}
+        /* Tabbing to a row selects it, so keyboard focus and the app's own
+           selection can never disagree. */
+        onFocus={(e) => { if (e.target === e.currentTarget && !selected) onSelect(); }}
         onClick={handleClick}
         onDoubleClick={renaming ? undefined : onOpen}
         onTouchStart={onTouchStart}
@@ -224,12 +280,19 @@ export default function Row({
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchCancel}
       >
-        <img
-          className="fav"
-          src={item.favicon}
-          alt=""
-          onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
-        />
+        {/* The letter-mark sits underneath and shows through when the favicon
+            fails, instead of leaving the blank gap it used to. */}
+        <div className="fav-well">
+          <span className="fav-letter">{(domain(item.url)[0] || "?").toUpperCase()}</span>
+          {item.favicon && (
+            <img
+              className="fav"
+              src={item.favicon}
+              alt=""
+              onError={(e) => { e.currentTarget.remove(); }}
+            />
+          )}
+        </div>
         <div className="meta">
           {renaming ? (
             <input
@@ -248,19 +311,35 @@ export default function Row({
           ) : (
             <div className="title" title={item.title}>{item.title}</div>
           )}
-          <div className="url">{item.url}</div>
+          <div className="url" title={item.url}>
+            <span className="dom">{domain(item.url)}</span>
+            <span className="sep">·</span>
+            <span className="when">{ago(item.added)}</span>
+            {selected && pathOf(item.url) && (
+              <>
+                <span className="sep">·</span>
+                <span className="path">{pathOf(item.url)}</span>
+              </>
+            )}
+          </div>
         </div>
 
         {item.tags && item.tags.length > 0 && (
           <div className="row-tags">
             {item.tags.map((t) => (
-              <span
+              <button
                 key={t}
+                type="button"
                 className={"chip" + (t === tagFilter ? " active" : "")}
+                tabIndex={rove}
+                /* it toggles a filter rather than navigating, so pressed
+                   state is the honest thing to announce */
+                aria-pressed={t === tagFilter}
+                aria-label={`Filter by ${t}`}
                 onClick={(e) => { e.stopPropagation(); onFilterTag(t); }}
               >
                 {t}
-              </span>
+              </button>
             ))}
           </div>
         )}
@@ -268,16 +347,17 @@ export default function Row({
         {item.loading
           ? <span className="spin">reading…</span>
           : item.state === "later"
-            ? <span className="badge later">later</span>
+            ? <span className="badge later">Later</span>
             : item.state === "archived"
-              ? <span className="badge archived">archived</span>
+              ? <span className="badge archived">Archived</span>
               : null}
 
         {!renaming && (
           <button
             className="row-btn rename-btn"
             title="Rename (e)"
-            aria-label="Rename"
+            aria-label={`Rename ${item.title}`}
+            tabIndex={rove}
             onClick={(e) => { e.stopPropagation(); onSelect(); onRenameStart?.(); }}
           >
             <Pencil size={14} strokeWidth={2.2} />
@@ -287,11 +367,28 @@ export default function Row({
         <button
           className="row-btn refresh-btn"
           title="Refresh title & favicon (r)"
+          aria-label={`Refresh title and favicon for ${item.title}`}
+          tabIndex={rove}
           disabled={item.loading}
           onClick={(e) => { e.stopPropagation(); onRefresh(); }}
         >
           <RotateCw size={14} strokeWidth={2.2} />
         </button>
+
+        {/* The same sheet long-press opens — the tappable way in on touch
+            devices, where there's no hover and no keyboard shortcuts. */}
+        {!renaming && (
+          <button
+            className="row-btn more-btn"
+            title="More actions"
+            aria-label={`More actions for ${item.title}`}
+            aria-haspopup="dialog"
+            tabIndex={rove}
+            onClick={(e) => { e.stopPropagation(); onSelect(); onActions?.(); }}
+          >
+            <MoreHorizontal size={14} strokeWidth={2.2} />
+          </button>
+        )}
       </div>
     </div>
   );

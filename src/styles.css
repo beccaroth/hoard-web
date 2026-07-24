@@ -1,83 +1,101 @@
+/* ── Vault, light ──────────────────────────────────────────────────────
+   Parchment rather than white, so the warmth the direction depends on
+   survives. The accent splits in two: --accent is the text-safe bronze
+   (5.8:1 on --surface), --accent-line the brighter brass that only ever
+   draws rules and borders, where contrast rules don't apply. */
 :root {
-  --bg:        #f4f5f7;
-  --surface:   #ffffff;
-  --surface-2: #f8f9fb;
-  --border:    #e7e9ee;
-  --border-2:  #eef0f3;
-  --ink:       #14161a;
-  --muted:     #656b76;
-  --faint:     #9aa0aa;
-  --accent:    #2f6bff;
-  --accent-2:  #1f50d8;
-  --accent-bg: #eaf0ff;
-  --accent-bg-strong: #dde7ff;
-  --tabs-bg:   rgba(255,255,255,.86);
-  --scroll-thumb:       #d7dae1;
-  --scroll-thumb-hover: #c4c8d1;
-  --green:     #0f9d58;
-  --green-bg:  #e7f6ee;
-  --amber:     #b5730c;
-  --amber-bg:  #fcf2e2;
+  --bg:        #efe9dd;
+  --surface:   #fbf8f2;
+  --surface-2: #f2ecdf;
+  --border:    #e0d8c6;
+  --border-2:  #eae3d4;
+  --ink:       #1e1913;
+  --muted:     #6b6152;
+  --faint:     #9a8f7a;
+  --accent:    #7d5c14;
+  --accent-2:  #5c430c;
+  --accent-line: #c3a15a;
+  --accent-bg: rgba(155,117,32,.11);
+  --accent-bg-strong: rgba(155,117,32,.20);
+  --mark-a:    #a87c22;
+  --mark-b:    #6d4f10;
+  --tabs-bg:   rgba(251,248,242,.88);
+  --scroll-thumb:       #ddd4c0;
+  --scroll-thumb-hover: #cabfa6;
+  --green:     #4c6b39;
+  --green-bg:  rgba(76,107,57,.12);
+  --amber:     #9a5a22;
+  --amber-bg:  rgba(154,90,34,.12);
   --radius:    14px;
-  --shadow-sm: 0 1px 2px rgba(20,22,26,.05);
-  --shadow:    0 4px 14px rgba(20,22,26,.06);
-  --shadow-lg: 0 12px 36px rgba(20,22,26,.10);
-  --sans: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --shadow-sm: 0 1px 2px rgba(60,48,24,.05);
+  --shadow:    0 1px 2px rgba(60,48,24,.05), 0 10px 28px rgba(60,48,24,.07);
+  --shadow-lg: 0 18px 46px rgba(50,40,20,.22);
+  --grain:     .035;
+  --sans: "Archivo", -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: "Martian Mono", ui-monospace, Menlo, monospace;
+  --display: "Fraunces", Georgia, serif;
   color-scheme: light;
 }
 /* dark palette: applied when system is dark (unless user forced light)
    OR when user explicitly forced dark. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg:        #0d0f13;
-    --surface:   #16191f;
-    --surface-2: #1c2027;
-    --border:    #2a2f38;
-    --border-2:  #23272f;
-    --ink:       #e7e9ee;
-    --muted:     #9aa0aa;
-    --faint:     #656b76;
-    --accent:    #5a8cff;
-    --accent-2:  #84a8ff;
-    --accent-bg: rgba(90,140,255,.16);
-    --accent-bg-strong: rgba(90,140,255,.28);
-    --tabs-bg:   rgba(22,25,31,.86);
-    --scroll-thumb:       #353a44;
-    --scroll-thumb-hover: #454b56;
-    --green:     #4ade80;
-    --green-bg:  rgba(74,222,128,.14);
-    --amber:     #fbbf24;
-    --amber-bg:  rgba(251,191,36,.14);
+    --bg:        #100e0b;
+    --surface:   #17140f;
+    --surface-2: #1e1a13;
+    --border:    #2a2419;
+    --border-2:  #211c14;
+    --ink:       #f2ebdd;
+    --muted:     #a2977f;
+    --faint:     #6f6653;
+    --accent:    #d9a441;
+    --accent-2:  #f2c976;
+    --accent-line: #5a4620;
+    --accent-bg: rgba(217,164,65,.10);
+    --accent-bg-strong: rgba(217,164,65,.20);
+    --mark-a:    #f2c976;
+    --mark-b:    #a87a2c;
+    --tabs-bg:   rgba(23,20,15,.88);
+    --scroll-thumb:       #332c1f;
+    --scroll-thumb-hover: #453c2a;
+    --green:     #8fae7a;
+    --green-bg:  rgba(143,174,122,.14);
+    --amber:     #c47a4a;
+    --amber-bg:  rgba(196,122,74,.14);
     --shadow-sm: 0 1px 2px rgba(0,0,0,.30);
-    --shadow:    0 4px 14px rgba(0,0,0,.35);
-    --shadow-lg: 0 12px 36px rgba(0,0,0,.50);
+    --shadow:    0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
+    --shadow-lg: 0 18px 46px rgba(0,0,0,.55);
+    --grain:     .05;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg:        #0d0f13;
-  --surface:   #16191f;
-  --surface-2: #1c2027;
-  --border:    #2a2f38;
-  --border-2:  #23272f;
-  --ink:       #e7e9ee;
-  --muted:     #9aa0aa;
-  --faint:     #656b76;
-  --accent:    #5a8cff;
-  --accent-2:  #84a8ff;
-  --accent-bg: rgba(90,140,255,.16);
-  --accent-bg-strong: rgba(90,140,255,.28);
-  --tabs-bg:   rgba(22,25,31,.86);
-  --scroll-thumb:       #353a44;
-  --scroll-thumb-hover: #454b56;
-  --green:     #4ade80;
-  --green-bg:  rgba(74,222,128,.14);
-  --amber:     #fbbf24;
-  --amber-bg:  rgba(251,191,36,.14);
+  --bg:        #100e0b;
+  --surface:   #17140f;
+  --surface-2: #1e1a13;
+  --border:    #2a2419;
+  --border-2:  #211c14;
+  --ink:       #f2ebdd;
+  --muted:     #a2977f;
+  --faint:     #6f6653;
+  --accent:    #d9a441;
+  --accent-2:  #f2c976;
+  --accent-line: #5a4620;
+  --accent-bg: rgba(217,164,65,.10);
+  --accent-bg-strong: rgba(217,164,65,.20);
+  --mark-a:    #f2c976;
+  --mark-b:    #a87a2c;
+  --tabs-bg:   rgba(23,20,15,.88);
+  --scroll-thumb:       #332c1f;
+  --scroll-thumb-hover: #453c2a;
+  --green:     #8fae7a;
+  --green-bg:  rgba(143,174,122,.14);
+  --amber:     #c47a4a;
+  --amber-bg:  rgba(196,122,74,.14);
   --shadow-sm: 0 1px 2px rgba(0,0,0,.30);
-  --shadow:    0 4px 14px rgba(0,0,0,.35);
-  --shadow-lg: 0 12px 36px rgba(0,0,0,.50);
+  --shadow:    0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
+  --shadow-lg: 0 18px 46px rgba(0,0,0,.55);
+  --grain:     .05;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -92,7 +110,33 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-#root { display: flex; flex-direction: column; }
+/* A little tooth over the flat fills, so the surfaces read as material
+   rather than as stacked rectangles. Sits above the background and below
+   everything else, and never eats a click. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--grain);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+#root { display: flex; flex-direction: column; position: relative; z-index: 1; }
+
+/* Keyboard focus, visible at last. The app advertises a dozen shortcuts and
+   had no focus style on a single button until now. */
+:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Rows run edge to edge, so an outset ring would be clipped by the card —
+   this one sits just inside instead. */
+.item:focus-visible {
+  outline-offset: -2px;
+  border-radius: 0;
+}
 
 /* ---------- header ---------- */
 header {
@@ -105,12 +149,35 @@ header {
   position: relative;
   z-index: 50;
 }
-.brand { display: flex; align-items: center; gap: 11px; }
-.brand .logo { width: 26px; height: 26px; display: block; }
-.brand h1 { font-size: 19px; font-weight: 750; letter-spacing: -.02em; margin: 0; }
+.brand { display: flex; align-items: baseline; gap: 11px; }
+/* Masked rather than drawn, so the mark takes the theme's accent instead of
+   carrying a hard-coded colour that only ever matched one palette. */
+.brand .logo {
+  width: 26px; height: 26px;
+  display: block;
+  align-self: center;
+  background: linear-gradient(96deg, var(--mark-a), var(--mark-b));
+  -webkit-mask: url(/favicon.svg) center / contain no-repeat;
+  mask: url(/favicon.svg) center / contain no-repeat;
+}
+.brand h1 {
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 60, "WONK" 1;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -.025em;
+  margin: 0;
+  background: linear-gradient(96deg, var(--mark-a), var(--mark-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 .header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .header-right .btn-ghost { padding: 7px 14px; font-size: 12.5px; }
-.legend { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+/* Never wrapped: the full strip is ~965px, so it's shown only at widths that
+   fit it on one line (see the responsive block) and collapses to the keyboard
+   button below that. */
+.legend { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
 .legend .pair {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 11px 5px 7px;
@@ -135,61 +202,6 @@ kbd {
   line-height: 1.3;
 }
 
-/* ---------- header toggle ---------- */
-.fold-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--sans);
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--muted);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 6px 9px;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: color .15s ease, border-color .15s ease;
-}
-.fold-btn:hover { color: var(--ink); border-color: var(--faint); }
-.fold-btn svg { width: 14px; height: 14px; transition: transform .25s ease; }
-body.folded .fold-btn svg { transform: rotate(180deg); }
-
-.fold-btn-tooltip {
-  position: absolute;
-  top: 50%;
-  left: calc(100% + 8px);
-  transform: translateY(-50%) translateX(-4px);
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
-  font-size: 12px;
-  font-weight: 500;
-  color: #fff;
-  background: #2b2b2e;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 6px 9px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .12s ease, transform .12s ease;
-  z-index: 50;
-}
-.fold-btn-tooltip kbd {
-  color: rgba(255, 255, 255, 0.88);
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.14);
-}
-.fold-btn:hover .fold-btn-tooltip,
-.fold-btn:focus-visible .fold-btn-tooltip {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
-  transition-delay: .15s;
-}
 
 /* ---------- theme toggle tooltip ---------- */
 .theme-btn { position: relative; }
@@ -224,66 +236,143 @@ body.folded .fold-btn svg { transform: rotate(180deg); }
   transition-delay: .15s;
 }
 
-/* ---------- layout ---------- */
+/* ---------- layout ----------
+   One column. The catalog is the app; adding links happens in a modal that
+   isn't on screen the rest of the time. */
 main {
   flex: 1;
   display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 18px;
+  grid-template-columns: 1fr;
   padding: 0 18px 18px;
   min-height: 0;
-  transition: grid-template-columns .3s cubic-bezier(.4,0,.2,1), gap .3s ease;
-}
-body.folded main { grid-template-columns: 0fr 1fr; gap: 0; }
-.left {
-  overflow: hidden;
-  transition: opacity .2s ease, transform .25s cubic-bezier(.4,0,.2,1), padding .3s ease, border-width .3s ease;
-}
-body.folded .left {
-  opacity: 0;
-  transform: translateX(-12px);
-  padding-left: 0; padding-right: 0;
-  border-width: 0;
-  pointer-events: none;
 }
 
-/* ---------- deposit ---------- */
-.left {
+/* ---------- stash modal ---------- */
+.stash-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10004;
+  background: rgba(40, 32, 16, .34);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5vh 14px;
+  animation: fade .14s ease both;
+}
+.stash-modal {
+  width: 100%;
+  max-width: 470px;
+  max-height: 90vh;
+  overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 22px;
+  box-shadow: var(--shadow-lg);
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  min-height: 0;
+  gap: 11px;
 }
-.panel-head {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -.01em;
+.stash-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 60, "WONK" 1;
+  font-style: italic;
+  font-size: 18px;
+  font-weight: 600;
 }
-.sheet-close {
-  display: none;
+.stash-close {
+  display: grid;
   place-items: center;
   background: transparent;
-  border: none;
+  border: 1px solid var(--border);
   color: var(--muted);
-  border-radius: 8px;
-  padding: 5px;
+  border-radius: 4px;
+  padding: 4px 6px;
   cursor: pointer;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .08em;
 }
-.sheet-close:hover { background: var(--surface-2); color: var(--ink); }
-.panel-note { font-size: 12.5px; color: var(--muted); margin-top: -8px; }
-.panel-note kbd { vertical-align: middle; }
+.stash-close:hover { color: var(--ink); border-color: var(--faint); }
+.stash-note { font-size: 12.5px; color: var(--muted); margin-top: -4px; line-height: 1.5; }
+.stash-foot { display: flex; gap: 9px; align-items: center; }
+/* Says what it's about to do — including what it will skip, which the old
+   panel decided silently. */
+.stash-count {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--faint);
+  line-height: 1.5;
+}
+.stash-count b { color: var(--accent); font-weight: 400; }
+/* The only place in the app that admits the faster paths exist — folded away
+   until asked for, since it's learned once and then never needed again. */
+.stash-faster {
+  border-top: 1px solid var(--border-2);
+  margin-top: 2px;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stash-faster .lab {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: color .12s ease;
+}
+.stash-faster .lab::-webkit-details-marker { display: none; }
+/* Chevron rather than the default disclosure triangle, which doesn't sit
+   right next to mono capitals. */
+.stash-faster .lab::after {
+  content: "▾";
+  font-size: 9px;
+  color: var(--faint);
+  transition: transform .15s ease;
+}
+.stash-faster[open] .lab::after { transform: rotate(180deg); }
+.stash-faster .lab:hover { color: var(--muted); }
+.stash-faster[open] .lab { margin-bottom: 2px; }
+.stash-faster .row-way {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.stash-faster .row-way b { color: var(--ink); font-weight: 600; }
+.stash-faster .bookmarklet {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--accent);
+  border: 1px solid var(--accent-line);
+  background: var(--accent-bg);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: grab;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.stash-faster .bookmarklet:active { cursor: grabbing; }
+
 textarea {
   flex: 1;
-  min-height: 200px;
+  min-height: 132px;
   resize: none;
   background: var(--surface-2);
   color: var(--ink);
@@ -302,7 +391,6 @@ textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px var(--accent-bg);
 }
-.btn-row { display: flex; gap: 10px; }
 button {
   font-family: var(--sans);
   font-weight: 650;
@@ -320,14 +408,64 @@ button {
   box-shadow: var(--shadow-sm);
 }
 .btn-primary:hover { background: var(--accent-2); box-shadow: var(--shadow); }
+/* A disabled control has to look disabled — "Stash" with nothing to stash was
+   rendering at full strength and reading as clickable. */
+button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+button:disabled:hover { background: var(--accent); box-shadow: var(--shadow-sm); }
+.btn-ghost:disabled:hover, .row-btn:disabled:hover {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--border);
+}
 .btn-primary:active { transform: translateY(1px); }
 .btn-ghost {
-  background: var(--surface);
+  background: transparent;
   color: var(--muted);
   border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  white-space: nowrap;
 }
-.btn-ghost:hover { color: var(--ink); border-color: var(--faint); }
-.status { font-size: 12px; color: var(--muted); min-height: 17px; }
+.btn-ghost:hover { color: var(--accent); border-color: var(--accent-line); background: var(--accent-bg); }
+
+/* The one way in. Never wraps — a two-line control in the header is the same
+   bug the shortcut legend had. */
+.stash-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-line);
+  border-radius: 3px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.stash-btn:hover { background: var(--accent-bg-strong); color: var(--accent-2); }
+.stash-btn kbd {
+  font-size: 8.5px;
+  opacity: .75;
+  color: inherit;
+  background: transparent;
+  border-color: var(--accent-line);
+  padding: 1px 4px;
+  min-width: 0;
+}
 
 .export-wrap { position: relative; }
 .menu {
@@ -525,15 +663,35 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px 16px;
+  /* No bottom padding: the view tabs run to the strip's edge so the active
+     tab's underline lands on the separator instead of floating above it —
+     one rule with a bronze segment, not two parallel lines. */
+  padding: 12px 16px 0;
   background: var(--tabs-bg);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border-2);
 }
-.tabs-left { display: flex; gap: 4px; flex-wrap: wrap; }
+/* Scrolls sideways rather than wrapping: how much room the strip has depends
+   on the window width and on how many views there are, and a view
+   name broken across two lines re-flows the whole catalog header. */
+.tabs-left {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  min-width: 0;
+  flex: 1;
+  /* Fades the cut edge so a half-visible tab reads as "scroll for more".
+     Self-hiding: with room to spare nothing reaches the faded strip. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+}
+.tabs-left::-webkit-scrollbar { display: none; }
 .tabs-left .tab svg { color: var(--faint); flex-shrink: 0; }
 .tabs-left .tab.active svg { color: var(--accent-2); }
-.tabs-right { display: flex; align-items: center; gap: 8px; }
+.tabs-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .search-wrap { position: relative; display: flex; align-items: center; }
 .search-icon {
   position: absolute;
@@ -575,60 +733,79 @@ button {
 .search-suggest.show { display: flex; }
 .tab {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 7px;
-  font-family: var(--sans);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-weight: 400;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--faint);
   background: transparent;
   border: none;
-  border-radius: 9px;
-  padding: 7px 13px;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 13px 0 11px;
+  margin-right: 18px;
   cursor: pointer;
-  transition: background .12s ease, color .12s ease;
+  transition: color .12s ease, border-color .12s ease;
 }
-.tab:hover { background: var(--surface-2); color: var(--ink); }
-.tab.active { background: var(--accent-bg); color: var(--accent-2); }
+.tab:hover { color: var(--muted); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent-line); }
 .tab .n {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 8.5px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--faint);
-  background: var(--surface-2);
-  border-radius: 20px;
-  padding: 0 7px;
-  line-height: 17px;
+  background: transparent;
+  padding: 0;
 }
-.tab.active .n { color: var(--accent-2); background: var(--accent-bg-strong); }
+.tab.active .n { color: var(--accent); }
+.tabs-left .tab svg { align-self: center; }
 
+/* The section mark carries the hierarchy now that rows have no card of their
+   own — an italic display face and a rule that fades out across the width. */
 .section-title {
   position: sticky;
   top: 53px;
   background: var(--tabs-bg);
   backdrop-filter: blur(8px);
-  padding: 16px 22px 9px;
+  padding: 20px 22px 9px;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 13px;
   z-index: 2;
 }
-.section-title .name { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.section-title .name {
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 60, "WONK" 1;
+  font-style: italic;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: .005em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.section-title .rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border), transparent);
+}
 .section-title .count {
-  font-size: 11px;
-  font-weight: 600;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 400;
   color: var(--faint);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 0 8px;
-  line-height: 18px;
 }
 
 .item-row { position: relative; }
+/* Rows are full-bleed now, so the swipe backing fills the row exactly rather
+   than sitting inset behind a floating card. */
 .swipe-bg {
   position: absolute;
-  inset: 2px 10px;
-  border-radius: 11px;
+  inset: 0;
   display: none;
   align-items: center;
   justify-content: space-between;
@@ -660,41 +837,124 @@ button {
 .swipe-bg[data-dir="archive"] .swipe-icon-archive { display: inline-flex; }
 .swipe-bg[data-dir="delete"]  .swipe-icon-delete  { display: inline-flex; }
 
-/* Keep toasts below the modal layer (TagEditor 10001/2, RowActions 10003) so
-   the long-press actions panel sits over any visible notification toast. */
-[data-sonner-toaster] { z-index: 10000 !important; }
+/* ---------- toasts ----------
+   Kept below the modal layer (TagEditor 10001/2, RowActions 10003) so the
+   long-press actions panel sits over any visible toast.
 
+   Sonner injects its own stylesheet at runtime, which lands after this file
+   and would win on equal specificity — so every rule here is scoped through
+   the toaster to outrank it, rather than reaching for !important. */
+[data-sonner-toaster] {
+  z-index: 10000 !important;
+  --width: 340px;
+  --normal-bg: var(--surface);
+  --normal-border: var(--border);
+  --normal-text: var(--ink);
+}
+[data-sonner-toaster] [data-sonner-toast] {
+  font-family: var(--sans);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  /* the brass edge is the only ornament — it ties the toast to the selected
+     row, which is marked the same way */
+  border-left: 2px solid var(--accent-line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  padding: 12px 14px;
+  gap: 11px;
+}
+[data-sonner-toaster] [data-sonner-toast] [data-title] {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -.005em;
+  color: var(--ink);
+}
+/* Descriptions are almost always a URL or a count, so they get the mono. */
+[data-sonner-toaster] [data-sonner-toast] [data-description] {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  line-height: 1.5;
+  letter-spacing: .03em;
+  color: var(--muted);
+  margin-top: 4px;
+  word-break: break-all;
+}
+/* Undo, matched to the header's stash control so the two read as siblings. */
+[data-sonner-toaster] [data-sonner-toast] [data-button] {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-line);
+  border-radius: 4px;
+  padding: 6px 10px;
+  height: auto;
+  flex-shrink: 0;
+  transition: background .15s ease, color .15s ease;
+}
+[data-sonner-toaster] [data-sonner-toast] [data-button]:hover {
+  background: var(--accent-bg-strong);
+  color: var(--accent-2);
+}
+[data-sonner-toaster] [data-sonner-toast] [data-close-button] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+[data-sonner-toaster] [data-sonner-toast] [data-close-button]:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* Rows run the full width of the card — a ledger inside a card, rather than
+   a card inside a card. The selected row is marked by a rule on the leading
+   edge instead of a floating pip. */
 .item {
   display: flex;
   align-items: center;
   gap: 13px;
-  margin: 2px 10px;
-  padding: 9px 12px;
-  border-radius: 11px;
+  margin: 0;
+  padding: 11px 20px;
+  border-left: 2px solid transparent;
   cursor: pointer;
   position: relative;
-  background: var(--surface);
-  transition: background .12s ease;
+  background: transparent;
+  transition: background .12s ease, border-color .12s ease;
 }
 .item:hover { background: var(--surface-2); }
-.item.sel { background: var(--accent-bg); }
-.item.sel::before {
-  content: "";
-  position: absolute;
-  left: -4px; top: 50%;
-  transform: translateY(-50%);
-  width: 3px; height: 22px;
-  border-radius: 3px;
-  background: var(--accent);
-}
-.fav {
-  width: 26px; height: 26px;
-  border-radius: 7px;
+.item.sel { background: var(--accent-bg); border-left-color: var(--accent-line); }
+/* The favicon sits in a well so a missing or off-white icon still lands in a
+   consistent shape; the letter-mark underneath shows through when it 404s. */
+.fav-well {
+  position: relative;
+  width: 28px; height: 28px;
   flex-shrink: 0;
+  border-radius: 7px;
   background: var(--surface-2);
   border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.item.sel .fav-well { border-color: var(--accent-line); }
+.fav-letter {
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 60, "WONK" 1;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--faint);
+}
+.item.sel .fav-letter { color: var(--accent); }
+.fav {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 17px; height: 17px;
   object-fit: contain;
-  padding: 2px;
 }
 .meta { min-width: 0; flex: 1; }
 .title {
@@ -720,25 +980,44 @@ button {
   border-radius: 6px;
   outline: none;
 }
+/* The domain plus when it arrived, not the full URL — a truncated path told
+   you nothing the hostname doesn't. The path returns on the selected row. */
 .url {
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  color: var(--muted);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap; overflow: hidden;
   font-family: var(--mono);
-  font-size: 11px;
-  margin-top: 1px;
+  font-size: 9.5px;
+  letter-spacing: .04em;
+  color: var(--faint);
+  margin-top: 2px;
 }
+.url .dom { color: var(--muted); flex-shrink: 0; }
+.url .sep { opacity: .5; }
+.url .path {
+  overflow: hidden; text-overflow: ellipsis;
+  opacity: 0;
+  max-width: 0;
+  transition: opacity .15s ease;
+}
+.item.sel .url .path { opacity: 1; max-width: none; }
+/* State as a word in a fixed column, not a coloured pill in the flow. Sized to
+   the longest label ("Archived") so the column can't reflow between states. */
 .badge {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .03em;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-weight: 400;
+  letter-spacing: .14em;
   text-transform: uppercase;
-  padding: 3px 9px;
-  border-radius: 20px;
+  white-space: nowrap;
   flex-shrink: 0;
+  width: 68px;
+  text-align: right;
 }
-.badge.later    { color: var(--amber); background: var(--amber-bg); }
-.badge.archived { color: var(--green); background: var(--green-bg); }
-.spin { font-size: 11px; color: var(--faint); flex-shrink: 0; }
+.badge.later    { color: var(--amber); }
+.badge.archived { color: var(--green); }
+.spin { font-family: var(--mono); font-size: 9px; color: var(--faint); flex-shrink: 0; letter-spacing: .06em; }
 .row-btn {
   display: none;
   flex-shrink: 0;
@@ -759,14 +1038,35 @@ button {
 .refresh-btn svg { transition: transform .4s cubic-bezier(.4,0,.2,1); }
 .refresh-btn:hover svg { transform: rotate(180deg); }
 .item.renaming .row-btn { display: none; }
-.empty { padding: 6px 22px 18px; color: var(--faint); font-size: 13px; }
+/* An empty view is the first thing a new user sees — it should say what to do
+   about it, not shrug. */
+.empty {
+  padding: 26px 22px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.empty .empty-line {
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 60, "WONK" 1;
+  font-style: italic;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.empty .empty-how {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .04em;
+  color: var(--faint);
+}
+.empty .empty-how kbd { margin: 0 1px; }
 
 @keyframes fade {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-header, .left, .right { animation: fade .45s ease both; }
-.left { animation-delay: .05s; }
+header, .right { animation: fade .45s ease both; }
 .right { animation-delay: .1s; }
 
 /* ---------- tag chips on rows ---------- */
@@ -779,36 +1079,54 @@ header, .left, .right { animation: fade .45s ease both; }
   overflow: hidden;
 }
 .chip {
-  font-size: 10.5px;
-  font-weight: 600;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 400;
   color: var(--muted);
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 2px 9px;
+  padding: 3px 9px;
   cursor: pointer;
   white-space: nowrap;
   transition: color .12s ease, background .12s ease, border-color .12s ease;
 }
-.chip::before { content: "#"; opacity: .5; margin-right: 1px; }
-.chip:hover, .chip.active { color: var(--accent-2); background: var(--accent-bg); border-color: var(--accent-bg-strong); }
+.chip::before { content: "#"; opacity: .45; margin-right: 1px; }
+.chip:hover, .chip.active { color: var(--accent); background: var(--accent-bg); border-color: var(--accent-line); }
 
-/* tag-filter chip in the tab bar */
+/* The two controls on the right share .tab for its type, but they're buttons,
+   not views — they keep a bordered pill shape instead of the underline. */
+.tabs-right .tab {
+  margin-right: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  align-items: center;
+}
+.tabs-right .tab:hover { color: var(--muted); border-color: var(--faint); }
+
 .tab.tagf {
   background: var(--accent-bg);
-  color: var(--accent-2);
+  color: var(--accent);
+  border-color: var(--accent-line);
 }
 .tab.tagf .x { font-weight: 700; opacity: .6; margin-left: 2px; }
 .tab.tagf:hover .x { opacity: 1; }
 
-.tab.sort-toggle svg { color: var(--faint); }
-.tab.sort-toggle:hover svg { color: var(--ink); }
+.tab.sort-toggle svg { color: var(--faint); width: 13px; height: 13px; }
+.tab.sort-toggle:hover svg { color: var(--muted); }
+/* The search fold controls belong to the phone layout only; the wide layout
+   keeps the field open, so they stay hidden here. */
+.search-toggle, .search-close { display: none; }
+.search-toggle svg, .search-close svg { color: var(--faint); }
 
 /* ---------- tag editor bar ---------- */
 .tagbar {
   position: fixed;
   left: 50%;
-  bottom: 26px;
+  /* --kb-inset is set by TagEditor to however much of the viewport the
+     software keyboard is covering (0 when there isn't one) */
+  bottom: calc(26px + var(--kb-inset, 0px));
   transform: translate(-50%, 16px);
   display: flex;
   align-items: center;
@@ -981,8 +1299,8 @@ header, .left, .right { animation: fade .45s ease both; }
 .cmdk-url { color: var(--muted); font-family: var(--mono); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .cmdk-empty { padding: 18px; color: var(--faint); font-size: 13px; text-align: center; }
 
-/* ---------- deposit FAB + sheet backdrop (mobile-only display) ---------- */
-.deposit-fab {
+/* ---------- stash FAB (mobile-only display) ---------- */
+.stash-fab {
   position: fixed;
   right: 18px;
   bottom: calc(18px + env(safe-area-inset-bottom));
@@ -990,27 +1308,18 @@ header, .left, .right { animation: fade .45s ease both; }
   width: 56px; height: 56px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
-  border: 1px solid var(--accent-2);
+  color: var(--bg);
+  border: 1px solid var(--accent-line);
   display: none;
   align-items: center;
   justify-content: center;
   padding: 0;
-  box-shadow: 0 8px 24px rgba(47, 107, 255, .35);
+  box-shadow: var(--shadow-lg);
   cursor: pointer;
 }
-.deposit-fab:hover { background: var(--accent-2); }
-.deposit-fab:active { transform: translateY(1px); }
-.deposit-fab.hidden { display: none; }
-.sheet-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 25;
-  background: rgba(20,22,26,.32);
-  backdrop-filter: blur(2px);
-  display: none;
-  animation: fade .14s ease both;
-}
+.stash-fab:hover { background: var(--accent-2); }
+.stash-fab:active { transform: translateY(1px); }
+.stash-fab.hidden { display: none; }
 
 /* ---------- row actions sheet (mobile long-press) ---------- */
 .row-actions-backdrop {
@@ -1172,50 +1481,75 @@ header, .left, .right { animation: fade .45s ease both; }
 .help-keys { display: inline-flex; gap: 4px; }
 .help-lab { font-size: 13px; color: var(--muted); font-weight: 500; }
 
-/* ---------- responsive: mobile (≤760px) ---------- */
-@media (max-width: 760px) {
+/* ---------- responsive: shortcut legend ----------
+   The legend plus the brand and the right-hand controls need ~1400px. Below
+   that it would wrap into a second header row, so it folds into the keyboard
+   button, which opens the same list as a modal. */
+@media (max-width: 1400px) {
+  .legend { display: none; }
+  .legend-trigger.icon-btn { display: inline-flex; }
+}
+
+/* ---------- responsive: touch devices ----------
+   Keyed off the pointer rather than the width so tablets — wide enough to keep
+   the two-pane layout — still get the phone's gestures. Without hover there's
+   nothing to reveal the per-row controls, so the row keeps a single always-on
+   overflow button and everything else lives in the actions sheet. */
+@media (hover: none) and (pointer: coarse) {
+  .item-row { overflow: hidden; }
+  .swipe-bg { display: flex; }
+  .item {
+    touch-action: pan-y;
+    user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .item.pressing { background: var(--accent-bg); transition: background .25s ease; }
+  /* the row suppresses selection for the swipe gestures — the rename field has
+     to opt back in, and needs 16px type or iOS zooms the page on focus */
+  .item.renaming { user-select: auto; -webkit-user-select: auto; }
+  .title-input { font-size: 16px; }
+
+  .item .rename-btn, .item.sel .rename-btn, .item:hover .rename-btn,
+  .item .refresh-btn, .item.sel .refresh-btn, .item:hover .refresh-btn { display: none; }
+  .item .more-btn { display: grid; }
+  .row-btn { width: 32px; height: 32px; }
+
+  /* the actions sheet sits mid-screen on a tablet — the bottom edge of a 1024pt
+     display is a reach, and there's room to show it as a plain dialog */
+  .row-actions-backdrop { align-items: center; }
+  .row-actions-sheet {
+    border-radius: 16px;
+    padding-bottom: 14px;
+    margin: 0 12px;
+  }
+}
+
+/* ---------- responsive: single column (≤900px) ----------
+   Phones and tablets in portrait: the catalog runs full-bleed and the stash
+   control drops to a floating button. */
+@media (max-width: 900px) {
   header { padding: 12px 14px; gap: 12px; }
   .header-right { gap: 8px; }
   .header-right .btn-ghost { padding: 7px 10px; }
-  .legend { display: none; }
-  .legend-trigger.icon-btn { display: inline-flex; }
-  .fold-btn { display: none; }
+  /* The header stash button and the floating one say the same thing; with the
+     FAB present the header control is pure width, and dropping it lets the
+     remaining icons sit on one line beside the logo instead of wrapping under
+     it. */
+  .stash-btn { display: none; }
+  /* No hardware keyboard here, so the shortcuts button (and its dialog) has
+     nothing to offer — hide it. Matches the ≤1400 selector's specificity so
+     this wins. */
+  .legend-trigger.icon-btn { display: none; }
+  /* Export collapses to its icon — the download glyph reads clearly enough,
+     and the word is the widest thing left in the header. */
+  .export-label { display: none; }
 
   main {
     grid-template-columns: 1fr;
     padding: 0 10px 10px;
     gap: 0;
   }
-  body.folded main { grid-template-columns: 1fr; gap: 0; }
 
-  /* deposit panel becomes a bottom sheet */
-  .left {
-    position: fixed;
-    left: 0; right: 0;
-    bottom: 0; top: auto;
-    z-index: 26;
-    margin: 0;
-    border-radius: 16px 16px 0 0;
-    padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
-    max-height: 80vh;
-    transform: translateY(100%);
-    opacity: 1;
-    pointer-events: auto;
-    transition: transform .25s cubic-bezier(.4,0,.2,1);
-    animation: none;
-  }
-  body.folded .left {
-    transform: translateY(100%);
-    opacity: 1;
-    padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
-    border-width: 1px;
-    pointer-events: auto;
-  }
-  .left.sheet-open { transform: translateY(0); }
-  body.folded .left.sheet-open { transform: translateY(0); }
-  .panel-head { font-size: 16px; }
-  .sheet-close { display: grid; }
-  textarea { min-height: 140px; }
 
   /* iOS Safari auto-zooms when a focused field's font-size is < 16px.
      Bump every text field to 16px on mobile to suppress the zoom. */
@@ -1225,54 +1559,48 @@ header, .left, .right { animation: fade .45s ease both; }
   .tagbar input,
   .cmdk-input { font-size: 16px; }
 
-  .deposit-fab { display: inline-flex; }
-  .sheet-backdrop { display: block; }
+  .stash-fab { display: inline-flex; }
 
   /* catalog */
   .right { border-radius: 12px; }
-  .tabs { padding: 10px 12px; gap: 6px; }
-  .tabs-left {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    min-width: 0;
-    flex: 1;
-  }
-  .tabs-left::-webkit-scrollbar { display: none; }
-  .tab {
-    padding: 7px 10px;
-    font-size: 12.5px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .tabs-right { flex-shrink: 0; }
+  /* One row, uncrowded: the view tabs own the strip while search folds into a
+     single icon beside the sort toggle. Tapping it (.searching) expands the
+     field across the whole strip and tucks the tabs away. */
+  .tabs { padding: 10px 12px 0; gap: 6px; }
+  .tab { padding: 9px 0 8px; font-size: 12.5px; }
   .tab.sort-toggle .sort-label { display: none; }
-  .search { width: 130px; }
-  .search:focus { width: 150px; }
-  .section-title { top: 47px; padding: 14px 14px 7px; }
 
-  .item-row { overflow: hidden; }
-  .swipe-bg { display: flex; inset: 1px 6px; }
-  .item { margin: 1px 6px; padding: 10px; gap: 10px; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
-  .item.pressing { background: var(--accent-bg); transition: background .25s ease; }
-  .item.sel::before { display: none; }
-  .row-tags { display: none; }
-  .item .row-btn,
-  .item.sel .row-btn,
-  .item:hover .row-btn { display: none; }
+  .search-toggle { display: inline-flex; }
+  .tabs-right .search-wrap { display: none; }
+
+  .tabs.searching .tabs-left,
+  .tabs.searching .tab.sort-toggle,
+  .tabs.searching .tab.tagf,
+  .tabs.searching .search-toggle { display: none; }
+  .tabs.searching .tabs-right { flex: 1; gap: 6px; }
+  .tabs.searching .search-wrap { display: flex; flex: 1; }
+  .tabs.searching .search,
+  .tabs.searching .search:focus { width: 100%; }
+  .tabs.searching .search-close { display: inline-flex; }
+  /* The tab row runs its underline to the separator (no bottom padding), but
+     with the tabs gone the search field would sit flush against that line.
+     Balance the padding so the field floats clear — kept level with the top
+     inset so the strip height, and the sticky section offset, don't shift. */
+  .tabs.searching { padding-top: 5px; padding-bottom: 5px; }
+
+  /* Sticks flush to the tab strip's bottom edge (its exact height) so the
+     separator and the section header meet with no seam. */
+  .section-title { top: 45px; padding: 14px 14px 7px; }
+
+  .item { padding: 10px 14px; gap: 10px; }
   .title { font-size: 14px; }
   .url { font-size: 11px; }
-  /* the row suppresses selection for the swipe gestures — the rename field has
-     to opt back in, and needs 16px type or iOS zooms the page on focus */
-  .item.renaming { user-select: auto; -webkit-user-select: auto; }
-  .title-input { font-size: 16px; }
 
   /* tag editor — full-width sheet */
   .tagbar {
     left: 8px;
     right: 8px;
-    bottom: calc(8px + env(safe-area-inset-bottom));
+    bottom: calc(8px + env(safe-area-inset-bottom) + var(--kb-inset, 0px));
     transform: translateY(16px);
     max-width: none;
     flex-wrap: wrap;
@@ -1286,4 +1614,21 @@ header, .left, .right { animation: fade .45s ease both; }
   .cmdk-backdrop { padding: 6vh 12px 0; }
   .cmdk { max-height: 80vh; }
   .cmdk-title { max-width: 50%; }
+
+  /* row actions — float the sheet as a rounded card with room on either side
+     rather than running it edge to edge. The touch query centres it on
+     tablets; here we keep it anchored to the bottom where a thumb can reach. */
+  .row-actions-backdrop { align-items: flex-end; }
+  .row-actions-sheet {
+    margin: 0 10px calc(10px + env(safe-area-inset-bottom));
+    border-radius: 18px;
+    padding-bottom: 14px;
+  }
+}
+
+/* ---------- responsive: phone (≤640px) ----------
+   Only this narrow does a row run out of room for its tags; a tablet in
+   portrait keeps them. */
+@media (max-width: 640px) {
+  .row-tags { display: none; }
 }

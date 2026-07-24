@@ -5,8 +5,29 @@ export default function TagEditor({ item, allTags, onAdd, onRemove, onClose }) {
   const [val, setVal] = useState("");
   const [hi, setHi] = useState(-1);
   const inputRef = useRef(null);
+  const barRef = useRef(null);
 
   useEffect(() => { inputRef.current?.focus(); }, [item.id]);
+
+  // The bar is docked to the bottom of the window, which on a phone or tablet
+  // is exactly where the software keyboard appears — and a fixed element stays
+  // put underneath it. Track how much of the viewport the keyboard is covering
+  // and lift the bar by that much.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    function update() {
+      const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      barRef.current?.style.setProperty("--kb-inset", `${covered}px`);
+    }
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
 
   const have = new Set(item.tags || []);
   const q = val.trim().replace(/^#/, "").toLowerCase();
@@ -42,7 +63,7 @@ export default function TagEditor({ item, allTags, onAdd, onRemove, onClose }) {
   }
 
   return (
-    <div className="tagbar show">
+    <div className="tagbar show" ref={barRef}>
       <span className="tb-label">Tag</span>
       <span className="tb-title">{item.title}</span>
       {item.tags && item.tags.length > 0 && (

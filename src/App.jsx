@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Toaster, toast } from "sonner";
 import {
-  ChevronLeft, Download, Upload, Copy, FileText, Braces,
-  Layers, Inbox, Clock, Archive, PanelLeft,
-  Keyboard, Plus, X, ArrowDownWideNarrow, ArrowUpWideNarrow,
+  Download, Upload, Copy, FileText, Braces,
+  Layers, Inbox, Clock, Archive, Trash2,
+  Keyboard, Plus, X, ArrowDownWideNarrow, ArrowUpWideNarrow, Search,
 } from "lucide-react";
 import Row from "./components/Row.jsx";
 import RowActions from "./components/RowActions.jsx";
@@ -11,16 +12,60 @@ import TagEditor from "./components/TagEditor.jsx";
 import AuthControl from "./components/AuthControl.jsx";
 import CommandPalette from "./components/CommandPalette.jsx";
 import SearchBox from "./components/SearchBox.jsx";
-import ThemeToggle from "./components/ThemeToggle.jsx";
+import StashModal from "./components/StashModal.jsx";
+import ThemeToggle, { readTheme } from "./components/ThemeToggle.jsx";
 import { useHoard, selectVisible, parseQuery, matchesItem, sortByAdded, SECTIONS } from "./store.js";
+import { normalizeUrl } from "./lib/urls.js";
 import { initSync, whenSynced } from "./lib/sync.js";
 
 const KEYS = [
-  { k: ["j", "k"], lab: "move" }, { k: ["o"], lab: "open" }, { k: ["c"], lab: "copy" },
-  { k: ["e"], lab: "rename" }, { k: ["r"], lab: "refresh" }, { k: ["t"], lab: "tag" },
-  { k: ["s"], lab: "later" }, { k: ["a"], lab: "archive" }, { k: ["d"], lab: "delete" },
-  { k: ["u"], lab: "undo" }, { k: ["1-4"], lab: "views" }, { k: ["⌘k"], lab: "palette" },
+  { k: ["n"], lab: "stash" }, { k: ["j", "k"], lab: "move" }, { k: ["o"], lab: "open" },
+  { k: ["c"], lab: "copy" }, { k: ["e"], lab: "rename" }, { k: ["r"], lab: "refresh" },
+  { k: ["t"], lab: "tag" }, { k: ["s"], lab: "later" }, { k: ["a"], lab: "archive" },
+  { k: ["d"], lab: "delete" }, { k: ["u"], lab: "undo" }, { k: ["1-4"], lab: "views" },
+  { k: ["⌘k"], lab: "search" },
 ];
+
+// An empty view should name the thing that fills it rather than shrug.
+const EMPTY = {
+  inbox:    { line: "Your inbox is clear.",      how: <>press <kbd>N</kbd> to stash a link</> },
+  later:    { line: "Nothing saved for later.",  how: <>press <kbd>S</kbd> on a link to keep it here</> },
+  archived: { line: "Nothing archived yet.",     how: <>press <kbd>A</kbd> on a link to file it here</> },
+};
+const EMPTY_HOARD = { line: "The hoard is empty.", how: <>press <kbd>N</kbd> to stash your first link</> };
+
+// The bookmarklet opens a tab purely to hand a link over, and until now that
+// tab just sat there — stash ten things and you have ten Hoard tabs. It can
+// close itself, but not before the link is actually safe: the push to Supabase
+// is debounced 800ms and then takes a round-trip, so closing on a timer would
+// strand the item in this browser's localStorage. So we wait for a sync that
+// completes *after* the add (syncState is already "synced" from the sign-in
+// pull, hence the lastSyncAt comparison), and if it errors or never lands we
+// deliberately leave the tab open — it's the thing that will retry.
+const CLOSE_MIN_VISIBLE_MS = 1000; // long enough to read the confirmation
+const CLOSE_GIVE_UP_MS = 8000;
+
+function closeWhenSafe({ needsPush }) {
+  const addedAt = Date.now();
+  const closeSoon = () =>
+    setTimeout(() => window.close(), Math.max(0, CLOSE_MIN_VISIBLE_MS - (Date.now() - addedAt)));
+
+  const settled = () => {
+    const { syncState, lastSyncAt } = useHoard.getState();
+    // "idle" means no account or no Supabase configured — nothing to wait for.
+    if (syncState === "idle") return true;
+    return syncState === "synced" && (lastSyncAt || 0) > addedAt;
+  };
+
+  // A duplicate changes nothing, so there's no push to wait on.
+  if (!needsPush || settled()) { closeSoon(); return; }
+
+  const unsub = useHoard.subscribe(
+    (s) => [s.syncState, s.lastSyncAt].join(":"),
+    () => { if (settled()) { unsub(); clearTimeout(giveUp); closeSoon(); } },
+  );
+  const giveUp = setTimeout(unsub, CLOSE_GIVE_UP_MS);
+}
 
 export default function App() {
   const items = useHoard((s) => s.items);
@@ -29,20 +74,23 @@ export default function App() {
   const query = useHoard((s) => s.query);
   const sort = useHoard((s) => s.sort);
   const selId = useHoard((s) => s.selId);
-  const folded = useHoard((s) => s.folded);
   const editingId = useHoard((s) => s.editingId);
   const renamingId = useHoard((s) => s.renamingId);
   const exportOpen = useHoard((s) => s.exportOpen);
-  const status = useHoard((s) => s.status);
 
-  const textareaRef = useRef(null);
   const fileRef = useRef(null);
   const searchRef = useRef(null);
   const [session, setSession] = useState(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [depositOpen, setDepositOpen] = useState(false);
+  const [stashOpen, setStashOpen] = useState(false);
   const [actionsId, setActionsId] = useState(null);
+  // On phones the search field folds into an icon so the view tabs keep the
+  // strip; opening it expands the field across the whole row.
+  const [searchOpen, setSearchOpen] = useState(false);
+  // Held here rather than inside the toggle so the toaster can wear the same
+  // theme — it was pinned dark, which looked wrong on the light palette.
+  const [theme, setTheme] = useState(readTheme);
 
   // auth + cross-device sync (no-op if Supabase env isn't configured)
   useEffect(() => initSync(setSession), []);
@@ -55,8 +103,15 @@ export default function App() {
     const url = params.get("add") || params.get("url");
     if (!url) return;
     const title = params.get("title") || "";
+    // Only a script-opened window may close itself, which is exactly the
+    // bookmarklet's tab. The iOS Shortcut navigates Safari here instead, so it
+    // has no opener and the tab correctly stays put.
+    const fromBookmarklet = Boolean(window.opener);
     window.history.replaceState(null, "", window.location.pathname + window.location.hash);
-    whenSynced(() => useHoard.getState().quickAdd({ url, title }));
+    whenSynced(() => {
+      const filed = useHoard.getState().quickAdd({ url, title });
+      if (fromBookmarklet) closeWhenSafe({ needsPush: filed });
+    });
   }, []);
 
   const visible = useMemo(() => selectVisible({ items, view, tagFilter, query, sort }), [items, view, tagFilter, query, sort]);
@@ -65,9 +120,8 @@ export default function App() {
   const editingItem = editingId ? items.find((i) => i.id === editingId) : null;
   const single = view !== "all";
   const countFor = (key) => (key === "all" ? items.length : items.filter((i) => i.state === key).length);
-
-  // reflect folded state on <body> (drives the layout transition)
-  useEffect(() => { document.body.classList.toggle("folded", folded); }, [folded]);
+  // The modal needs the dedupe keys to say what it will skip before you commit.
+  const existingUrls = useMemo(() => new Set(items.map((i) => normalizeUrl(i.url))), [items]);
 
   // keep selection valid + default to first visible item
   useEffect(() => {
@@ -82,9 +136,16 @@ export default function App() {
     if (renamingId && !visible.some((i) => i.id === renamingId)) useHoard.getState().setRenamingId(null);
   }, [visible, renamingId]);
 
-  // scroll the selection into view
+  // Scroll the selection into view, and take focus with it — but only when
+  // focus is already inside the catalog. Moving it unconditionally would yank
+  // the caret out of the search box on every j/k.
   useEffect(() => {
-    document.querySelector(".item.sel")?.scrollIntoView({ block: "nearest" });
+    const row = document.querySelector(".item.sel");
+    if (!row) return;
+    row.scrollIntoView({ block: "nearest" });
+    const active = document.activeElement;
+    const focusInList = active && active !== document.body && active.closest(".right");
+    if (focusInList && !row.contains(active)) row.focus({ preventScroll: true });
   }, [selId]);
 
   // close export menu on outside click
@@ -107,6 +168,7 @@ export default function App() {
       if (tag === "TEXTAREA" || tag === "INPUT") return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "/") { e.preventDefault(); searchRef.current?.focus(); return; }
+      if (e.key === "n" || e.key === "N") { e.preventDefault(); setStashOpen(true); return; }
       const s = useHoard.getState();
       switch (e.key) {
         case "j": case "ArrowDown": e.preventDefault(); s.moveSel(1); break;
@@ -120,7 +182,6 @@ export default function App() {
         case "d": e.preventDefault(); s.act("delete"); break;
         case "t": e.preventDefault(); if (s.selId) s.setEditingId(s.selId); break;
         case "u": e.preventDefault(); s.undo(); break;
-        case "[": e.preventDefault(); s.toggleFolded(); break;
         case "1": e.preventDefault(); s.setView("all"); break;
         case "2": e.preventDefault(); s.setView("inbox"); break;
         case "3": e.preventDefault(); s.setView("later"); break;
@@ -138,27 +199,13 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Escape closes the help / deposit overlays (local state isn't visible to the global handler above)
+  // Escape closes the help overlay (local state isn't visible to the global handler above)
   useEffect(() => {
-    if (!helpOpen && !depositOpen) return;
-    function onKey(e) {
-      if (e.key !== "Escape") return;
-      if (helpOpen) setHelpOpen(false);
-      if (depositOpen) setDepositOpen(false);
-    }
+    if (!helpOpen) return;
+    function onKey(e) { if (e.key === "Escape") setHelpOpen(false); }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [helpOpen, depositOpen]);
-
-  function fileFromTextarea() {
-    const text = textareaRef.current?.value || "";
-    useHoard.getState().addUrls(text);
-    if (textareaRef.current) textareaRef.current.value = "";
-    setDepositOpen(false);
-  }
-  function onTextareaKeyDown(e) {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); fileFromTextarea(); }
-  }
+  }, [helpOpen]);
 
   // ---- export / import (browser IO stays in the component) ----
   function download(filename, text, type) {
@@ -214,21 +261,13 @@ export default function App() {
     <>
       <header>
         <div className="brand">
-          <button
-            className="fold-btn"
-            aria-label={folded ? "Show left panel" : "Hide left panel"}
-            onClick={() => useHoard.getState().toggleFolded()}
-          >
-            <ChevronLeft size={14} strokeWidth={2.2} />
-            <span className="fold-btn-tooltip" role="tooltip">
-              {folded ? "Show left panel" : "Hide left panel"}
-              <kbd>[</kbd>
-            </span>
-          </button>
-          <img className="logo" src="/favicon.svg" alt="" />
+          <span className="logo" aria-hidden="true" />
           <h1>Hoard</h1>
         </div>
         <div className="header-right">
+          <button className="stash-btn" onClick={() => setStashOpen(true)}>
+            ＋ Stash Link <kbd>N</kbd>
+          </button>
           <div className="legend">
             {KEYS.map((p) => (
               <span className="pair" key={p.lab}>
@@ -245,12 +284,12 @@ export default function App() {
           >
             <Keyboard size={15} />
           </button>
-          <ThemeToggle />
+          <ThemeToggle theme={theme} onChange={setTheme} />
           <AuthControl session={session} />
           <div className="export-wrap">
             <button className="btn-ghost icon-btn" title="Export current view"
               onClick={(e) => { e.stopPropagation(); useHoard.getState().setExportOpen(!exportOpen); }}>
-              <Download size={15} /> Export
+              <Download size={15} /> <span className="export-label">Export</span>
             </button>
             <div className={"menu" + (exportOpen ? " show" : "")}>
               <button onClick={() => exportAs("copy-urls")}><Copy size={15} /> Copy URLs</button>
@@ -267,41 +306,17 @@ export default function App() {
       </header>
 
       <main>
-        <aside className={"left" + (depositOpen ? " sheet-open" : "")}>
-          <div className="panel-head">
-            Deposit links
-            <button
-              className="sheet-close"
-              aria-label="Close"
-              onClick={() => setDepositOpen(false)}
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <div className="panel-note">
-            Paste URLs — one per line, or any text with links in it. <kbd>⌘</kbd>+<kbd>↵</kbd> to file.
-          </div>
-          <textarea
-            ref={textareaRef}
-            spellCheck="false"
-            placeholder={"https://example.com\nhttps://news.ycombinator.com\na paragraph with a link.tld inside it…"}
-            onKeyDown={onTextareaKeyDown}
-          />
-          <div className="btn-row">
-            <button className="btn-primary" onClick={fileFromTextarea}>File to Inbox</button>
-            <button className="btn-ghost" onClick={clearAll}>Empty</button>
-          </div>
-          <div className="status">{status}</div>
-        </aside>
-
         <section className="right">
-          <div className="tabs">
+          <div className={"tabs" + (searchOpen ? " searching" : "")}>
             <div className="tabs-left">
               {[{ key: "all", label: "All", Icon: Layers, n: 1 }, { key: "inbox", label: "Inbox", Icon: Inbox, n: 2 },
                 { key: "later", label: "Saved for Later", Icon: Clock, n: 3 }, { key: "archived", label: "Archived", Icon: Archive, n: 4 }].map((t) => (
                 <button
                   key={t.key}
                   className={"tab" + (t.key === view ? " active" : "")}
+                  // the active view was conveyed only by colour + underline;
+                  // expose it to assistive tech too
+                  aria-current={t.key === view ? "page" : undefined}
                   title={`${t.label} (${t.n})`}
                   onClick={() => useHoard.getState().setView(t.key)}
                 >
@@ -326,12 +341,33 @@ export default function App() {
                   : <ArrowUpWideNarrow size={14} />}
                 <span className="sort-label">{sort === "newest" ? "Newest" : "Oldest"}</span>
               </button>
+              {/* Phone-only: the magnifier expands the field; Cancel folds it
+                  back. Both are hidden on wider screens, where the field is
+                  always open. */}
+              <button
+                className="tab search-toggle"
+                aria-label="Search"
+                aria-expanded={searchOpen}
+                /* Flush the expand synchronously so the field is on-screen and
+                   we can focus it inside the same tap — iOS only raises the
+                   keyboard for a focus that happens within the gesture. */
+                onClick={() => { flushSync(() => setSearchOpen(true)); searchRef.current?.focus(); }}
+              >
+                <Search size={14} />
+              </button>
               <SearchBox
                 ref={searchRef}
                 query={query}
                 setQuery={(v) => useHoard.getState().setQuery(v)}
                 allTags={allTags}
               />
+              <button
+                className="tab search-close"
+                aria-label="Close search"
+                onClick={() => { useHoard.getState().setQuery(""); setSearchOpen(false); }}
+              >
+                <X size={15} />
+              </button>
             </div>
           </div>
 
@@ -342,15 +378,32 @@ export default function App() {
             );
             if (!single && sec.key !== "inbox" && !secItems.length) return null;
             return (
-              <div key={sec.key}>
+              <div key={sec.key} role="list" aria-label={sec.label}>
                 {!single && (
                   <div className="section-title">
                     <span className="name">{sec.label}</span>
-                    <span className="count">{secItems.length}</span>
+                    <span className="rule" />
+                    <span className="count">{String(secItems.length).padStart(2, "0")}</span>
                   </div>
                 )}
                 {secItems.length === 0
-                  ? <div className="empty">Nothing here yet.</div>
+                  ? (() => {
+                      // A filtered-to-nothing view is a different situation from
+                      // an empty one — don't tell someone to press N when what
+                      // they need is to clear the search.
+                      const filtered = Boolean(query || tagFilter);
+                      const copy = filtered
+                        ? { line: "Nothing matches that.", how: <>press <kbd>esc</kbd> to clear the filter</> }
+                        : items.length === 0 && sec.key === "inbox"
+                          ? EMPTY_HOARD
+                          : EMPTY[sec.key];
+                      return (
+                        <div className="empty">
+                          <span className="empty-line">{copy.line}</span>
+                          <span className="empty-how">{copy.how}</span>
+                        </div>
+                      );
+                    })()
                   : secItems.map((i) => (
                       <Row
                         key={i.id}
@@ -373,7 +426,7 @@ export default function App() {
                           if (action === "tag") { useHoard.getState().setEditingId(i.id); return; }
                           useHoard.getState().act(action);
                         }}
-                        onLongPress={() => setActionsId(i.id)}
+                        onActions={() => setActionsId(i.id)}
                       />
                     ))}
               </div>
@@ -431,15 +484,18 @@ export default function App() {
         <CommandPalette
           items={items}
           commands={[
+            { id: "stash", label: "Stash links…", hint: "n", icon: <Plus size={16} />, run: () => setStashOpen(true) },
             { id: "v-all", label: "Go to All", hint: "1", icon: <Layers size={16} />, run: () => useHoard.getState().setView("all") },
             { id: "v-inbox", label: "Go to Inbox", hint: "2", icon: <Inbox size={16} />, run: () => useHoard.getState().setView("inbox") },
             { id: "v-later", label: "Go to Saved for Later", hint: "3", icon: <Clock size={16} />, run: () => useHoard.getState().setView("later") },
             { id: "v-arch", label: "Go to Archived", hint: "4", icon: <Archive size={16} />, run: () => useHoard.getState().setView("archived") },
-            { id: "fold", label: "Toggle sidebar", hint: "[", icon: <PanelLeft size={16} />, run: () => useHoard.getState().toggleFolded() },
             { id: "x-urls", label: "Copy URLs (current view)", icon: <Copy size={16} />, run: () => exportAs("copy-urls") },
             { id: "x-md", label: "Copy as Markdown (current view)", icon: <FileText size={16} />, run: () => exportAs("copy-md") },
             { id: "x-json", label: "Download .json (current view)", icon: <Braces size={16} />, run: () => exportAs("json") },
             { id: "import", label: "Import .json…", icon: <Upload size={16} />, run: () => fileRef.current?.click() },
+            // Emptying the hoard lost its button with the deposit panel; it's
+            // destructive and rare, so the palette is the right home for it.
+            { id: "empty", label: "Empty the hoard…", icon: <Trash2 size={16} />, run: clearAll },
           ]}
           onRunItem={(i) => { window.open(i.url, "_blank"); useHoard.getState().setSelId(i.id); }}
           onClose={() => setPaletteOpen(false)}
@@ -447,15 +503,19 @@ export default function App() {
       )}
 
       <button
-        className={"deposit-fab" + (depositOpen ? " hidden" : "")}
-        aria-label="Add links"
-        onClick={() => setDepositOpen(true)}
+        className={"stash-fab" + (stashOpen ? " hidden" : "")}
+        aria-label="Stash a link"
+        onClick={() => setStashOpen(true)}
       >
         <Plus size={22} strokeWidth={2.4} />
       </button>
 
-      {depositOpen && (
-        <div className="sheet-backdrop" onClick={() => setDepositOpen(false)} />
+      {stashOpen && (
+        <StashModal
+          existingUrls={existingUrls}
+          onStash={(text) => useHoard.getState().addUrls(text)}
+          onClose={() => setStashOpen(false)}
+        />
       )}
 
       {helpOpen && (
@@ -485,7 +545,10 @@ export default function App() {
         </div>
       )}
 
-      <Toaster position="bottom-center" theme="dark" toastOptions={{ style: { fontFamily: "var(--sans)" } }} />
+      {/* Bottom-right keeps toasts clear of the tag editor, which docks
+          bottom-centre. Styling lives in styles.css so it reads from the
+          theme tokens rather than being frozen into inline styles. */}
+      <Toaster position="bottom-right" theme={theme} />
     </>
   );
 }

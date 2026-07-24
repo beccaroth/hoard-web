@@ -87,11 +87,9 @@ export const useHoard = create(
       tagFilter: null,
       query: "",
       sort: "newest",
-      folded: false,
       editingId: null,
       renamingId: null,
       exportOpen: false,
-      status: "",
       // sync status — non-persisted, driven by lib/sync.js
       syncState: "idle", // "idle" | "syncing" | "synced" | "error"
       lastSyncAt: null,
@@ -106,11 +104,9 @@ export const useHoard = create(
       toggleSort: () => set((s) => ({ sort: s.sort === "oldest" ? "newest" : "oldest", selId: null })),
       toggleTagFilter: (tag) => set((s) => ({ tagFilter: s.tagFilter === tag ? null : tag, selId: null })),
       clearTagFilter: () => set({ tagFilter: null, selId: null }),
-      toggleFolded: () => set((s) => ({ folded: !s.folded })),
       setEditingId: (editingId) => set({ editingId }),
       setRenamingId: (renamingId) => set({ renamingId }),
       setExportOpen: (exportOpen) => set({ exportOpen }),
-      setStatus: (status) => set({ status }),
 
       // ---- metadata enrichment ----
       // The fetch is slow enough to land after the user has moved on, so the
@@ -138,7 +134,7 @@ export const useHoard = create(
 
       addUrls: (text) => {
         const urls = extractUrls(text);
-        if (!urls.length) { set({ status: "No URLs found in that text." }); return; }
+        if (!urls.length) { toast("No links found in that text"); return; }
         const { items, enrich } = get();
         const seen = new Set(items.map((i) => normalizeUrl(i.url)));
         const fresh = [];
@@ -153,10 +149,10 @@ export const useHoard = create(
             state: "inbox", added: now, updatedAt: now, loading: false, tags: [],
           });
         });
-        if (fresh.length) set({ items: [...fresh.slice().reverse(), ...items] });
-        let msg = fresh.length ? `Filed ${fresh.length} link${fresh.length > 1 ? "s" : ""}.` : "";
-        if (dupes) msg += `${msg ? " " : ""}${dupes} duplicate${dupes > 1 ? "s" : ""} skipped.`;
-        set({ status: msg || "Already in the hoard." });
+        if (fresh.length) set({ items: [...fresh.slice().reverse(), ...items], view: "all" });
+        const skipped = dupes ? `${dupes} already stashed` : undefined;
+        if (fresh.length) toast(`Stashed ${fresh.length} link${fresh.length > 1 ? "s" : ""}`, { description: skipped });
+        else toast("Already in your hoard", { description: skipped });
         fresh.forEach((it) => enrich(it.id, it.url));
       },
 
@@ -168,7 +164,7 @@ export const useHoard = create(
         const key = normalizeUrl(url);
         const existing = items.find((i) => normalizeUrl(i.url) === key);
         if (existing) {
-          set({ selId: existing.id, view: "all", status: "Already in your hoard." });
+          set({ selId: existing.id, view: "all" });
           toast("Already in your hoard", { description: existing.title });
           return false;
         }
@@ -178,8 +174,8 @@ export const useHoard = create(
           id: urlId(url), url, title: hasTitle ? title.trim() : domain(url),
           favicon: googleFav(url), state: "inbox", added: now, updatedAt: now, loading: false, tags: [],
         };
-        set({ items: [item, ...items], selId: item.id, view: "all", status: "Filed to Inbox." });
-        toast("Filed to Inbox", { description: item.title });
+        set({ items: [item, ...items], selId: item.id, view: "all" });
+        toast("Stashed", { description: item.title });
         enrich(item.id, url, { keepTitle: hasTitle });
         return true;
       },
@@ -203,7 +199,6 @@ export const useHoard = create(
             items: state.items.filter((i) => i.id !== item.id),
             tombstones: [...state.tombstones.filter((t) => t.id !== item.id), { id: item.id, deletedAt: Date.now() }],
             selId: nextId,
-            status: "Tossed. Press u to undo.",
           });
           toast("Tossed", { action: undoAction });
         } else {
@@ -211,7 +206,6 @@ export const useHoard = create(
           set({
             items: state.items.map((i) => (i.id === item.id ? { ...i, state: action, updatedAt: Date.now() } : i)),
             selId: nextId,
-            status: `${action === "later" ? "Saved for later" : action === "archived" ? "Archived" : "Moved to inbox"}. Press u to undo.`,
           });
           const label = action === "later" ? "Saved for later" : action === "archived" ? "Archived" : "Moved to inbox";
           toast(label, { action: undoAction });
@@ -220,7 +214,7 @@ export const useHoard = create(
 
       undo: () => {
         const last = undoStack.pop();
-        if (!last) { set({ status: "Nothing to undo." }); return; }
+        if (!last) { toast("Nothing to undo"); return; }
         const { items, tombstones } = get();
         if (last.type === "delete") {
           const copy = [...items];
@@ -230,7 +224,6 @@ export const useHoard = create(
             items: copy,
             tombstones: tombstones.filter((t) => t.id !== last.item.id),
             selId: last.item.id,
-            status: "Undone.",
           });
         } else if (last.type === "rename") {
           set({
@@ -238,10 +231,9 @@ export const useHoard = create(
               i.id === last.id ? { ...i, title: last.prevTitle, titleEdited: last.prevEdited, updatedAt: Date.now() } : i
             ),
             selId: last.id,
-            status: "Undone.",
           });
         } else {
-          set({ items: items.map((i) => (i.id === last.id ? { ...i, state: last.prevState, updatedAt: Date.now() } : i)), selId: last.id, status: "Undone." });
+          set({ items: items.map((i) => (i.id === last.id ? { ...i, state: last.prevState, updatedAt: Date.now() } : i)), selId: last.id });
         }
       },
 
@@ -288,7 +280,6 @@ export const useHoard = create(
         undoStack.push({ type: "rename", id, prevTitle: item.title, prevEdited: Boolean(item.titleEdited) });
         set((s) => ({
           items: s.items.map((i) => (i.id === id ? { ...i, title, titleEdited: true, updatedAt: Date.now() } : i)),
-          status: "Renamed. Press u to undo.",
         }));
         toast("Renamed", { description: title, action: { label: "Undo", onClick: () => get().undo() } });
       },
@@ -354,7 +345,7 @@ export const useHoard = create(
     {
       name: "hoard",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ items: s.items, tombstones: s.tombstones, view: s.view, folded: s.folded, sort: s.sort }),
+      partialize: (s) => ({ items: s.items, tombstones: s.tombstones, view: s.view, sort: s.sort }),
     }
   )
   )
