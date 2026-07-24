@@ -144,7 +144,10 @@ export default function App() {
     if (!row) return;
     row.scrollIntoView({ block: "nearest" });
     const active = document.activeElement;
-    const focusInList = active && active !== document.body && active.closest(".right");
+    // Follow focus only when it's already on a catalog row (j/k navigation).
+    // `.right` also contains the search box, so keying off it would yank the
+    // caret out of the field — and dismiss the mobile keyboard — mid-typing.
+    const focusInList = active && active.closest(".item");
     if (focusInList && !row.contains(active)) row.focus({ preventScroll: true });
   }, [selId]);
 
