@@ -1588,7 +1588,9 @@ header, .right { animation: fade .45s ease both; }
      inset so the strip height, and the sticky section offset, don't shift. */
   .tabs.searching { padding-top: 5px; padding-bottom: 5px; }
 
-  .section-title { top: 47px; padding: 14px 14px 7px; }
+  /* Sticks flush to the tab strip's bottom edge (its exact height) so the
+     separator and the section header meet with no seam. */
+  .section-title { top: 45px; padding: 14px 14px 7px; }
 
   .item { padding: 10px 14px; gap: 10px; }
   .title { font-size: 14px; }
