@@ -1575,6 +1575,11 @@ header, .right { animation: fade .45s ease both; }
   .tabs.searching .search,
   .tabs.searching .search:focus { width: 100%; }
   .tabs.searching .search-close { display: inline-flex; }
+  /* The tab row runs its underline to the separator (no bottom padding), but
+     with the tabs gone the search field would sit flush against that line.
+     Balance the padding so the field floats clear — kept level with the top
+     inset so the strip height, and the sticky section offset, don't shift. */
+  .tabs.searching { padding-top: 5px; padding-bottom: 5px; }
 
   .section-title { top: 47px; padding: 14px 14px 7px; }
 
