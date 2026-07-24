@@ -3,7 +3,7 @@ import { Toaster, toast } from "sonner";
 import {
   Download, Upload, Copy, FileText, Braces,
   Layers, Inbox, Clock, Archive, Trash2,
-  Keyboard, Plus, X, ArrowDownWideNarrow, ArrowUpWideNarrow,
+  Keyboard, Plus, X, ArrowDownWideNarrow, ArrowUpWideNarrow, Search,
 } from "lucide-react";
 import Row from "./components/Row.jsx";
 import RowActions from "./components/RowActions.jsx";
@@ -84,6 +84,9 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [stashOpen, setStashOpen] = useState(false);
   const [actionsId, setActionsId] = useState(null);
+  // On phones the search field folds into an icon so the view tabs keep the
+  // strip; opening it expands the field across the whole row.
+  const [searchOpen, setSearchOpen] = useState(false);
   // Held here rather than inside the toggle so the toaster can wear the same
   // theme — it was pinned dark, which looked wrong on the light palette.
   const [theme, setTheme] = useState(readTheme);
@@ -303,7 +306,7 @@ export default function App() {
 
       <main>
         <section className="right">
-          <div className="tabs">
+          <div className={"tabs" + (searchOpen ? " searching" : "")}>
             <div className="tabs-left">
               {[{ key: "all", label: "All", Icon: Layers, n: 1 }, { key: "inbox", label: "Inbox", Icon: Inbox, n: 2 },
                 { key: "later", label: "Saved for Later", Icon: Clock, n: 3 }, { key: "archived", label: "Archived", Icon: Archive, n: 4 }].map((t) => (
@@ -337,12 +340,30 @@ export default function App() {
                   : <ArrowUpWideNarrow size={14} />}
                 <span className="sort-label">{sort === "newest" ? "Newest" : "Oldest"}</span>
               </button>
+              {/* Phone-only: the magnifier expands the field; Cancel folds it
+                  back. Both are hidden on wider screens, where the field is
+                  always open. */}
+              <button
+                className="tab search-toggle"
+                aria-label="Search"
+                aria-expanded={searchOpen}
+                onClick={() => { setSearchOpen(true); requestAnimationFrame(() => searchRef.current?.focus()); }}
+              >
+                <Search size={14} />
+              </button>
               <SearchBox
                 ref={searchRef}
                 query={query}
                 setQuery={(v) => useHoard.getState().setQuery(v)}
                 allTags={allTags}
               />
+              <button
+                className="tab search-close"
+                aria-label="Close search"
+                onClick={() => { useHoard.getState().setQuery(""); setSearchOpen(false); }}
+              >
+                <X size={15} />
+              </button>
             </div>
           </div>
 

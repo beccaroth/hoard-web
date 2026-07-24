@@ -1115,6 +1115,10 @@ header, .right { animation: fade .45s ease both; }
 
 .tab.sort-toggle svg { color: var(--faint); width: 13px; height: 13px; }
 .tab.sort-toggle:hover svg { color: var(--muted); }
+/* The search fold controls belong to the phone layout only; the wide layout
+   keeps the field open, so they stay hidden here. */
+.search-toggle, .search-close { display: none; }
+.search-toggle svg, .search-close svg { color: var(--faint); }
 
 /* ---------- tag editor bar ---------- */
 .tagbar {
@@ -1552,18 +1556,27 @@ header, .right { animation: fade .45s ease both; }
 
   /* catalog */
   .right { border-radius: 12px; }
-  /* Two rows: the view tabs scroll along the top, and the sort + search
-     controls drop to their own line below, so neither has to fight the other
-     for the ~180px a single strip left them. */
-  .tabs { padding: 8px 12px 10px; gap: 6px; flex-wrap: wrap; }
-  .tabs-left { flex: 1 0 100%; }
-  .tabs-right { flex: 1 0 100%; }
-  .tabs-right .search-wrap { flex: 1; }
+  /* One row, uncrowded: the view tabs own the strip while search folds into a
+     single icon beside the sort toggle. Tapping it (.searching) expands the
+     field across the whole strip and tucks the tabs away. */
+  .tabs { padding: 10px 12px 0; gap: 6px; }
   .tab { padding: 9px 0 8px; font-size: 12.5px; }
   .tab.sort-toggle .sort-label { display: none; }
-  /* Fills the rest of its row rather than sitting at a fixed width. */
-  .search, .search:focus { width: 100%; }
-  .section-title { top: 93px; padding: 14px 14px 7px; }
+
+  .search-toggle { display: inline-flex; }
+  .tabs-right .search-wrap { display: none; }
+
+  .tabs.searching .tabs-left,
+  .tabs.searching .tab.sort-toggle,
+  .tabs.searching .tab.tagf,
+  .tabs.searching .search-toggle { display: none; }
+  .tabs.searching .tabs-right { flex: 1; gap: 6px; }
+  .tabs.searching .search-wrap { display: flex; flex: 1; }
+  .tabs.searching .search,
+  .tabs.searching .search:focus { width: 100%; }
+  .tabs.searching .search-close { display: inline-flex; }
+
+  .section-title { top: 47px; padding: 14px 14px 7px; }
 
   .item { padding: 10px 14px; gap: 10px; }
   .title { font-size: 14px; }
