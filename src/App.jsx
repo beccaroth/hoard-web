@@ -32,8 +32,8 @@ const KEYS = [
 // front of you rather than on the catalog's selection.
 const TRIAGE_KEYS = [
   { k: ["a"], lab: "archive" }, { k: ["s"], lab: "later" }, { k: ["space"], lab: "skip" },
-  { k: ["t"], lab: "tag" }, { k: ["e"], lab: "rename" }, { k: ["o"], lab: "open" },
-  { k: ["u"], lab: "undo" }, { k: ["esc"], lab: "leave" },
+  { k: ["d"], lab: "delete" }, { k: ["t"], lab: "tag" }, { k: ["e"], lab: "rename" },
+  { k: ["o"], lab: "open" }, { k: ["u"], lab: "undo" }, { k: ["esc"], lab: "leave" },
 ];
 
 // An empty view should name the thing that fills it rather than shrug.
