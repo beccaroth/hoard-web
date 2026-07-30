@@ -90,6 +90,9 @@ export const useHoard = create(
       editingId: null,
       renamingId: null,
       exportOpen: false,
+      // The details sidebar is desktop-only, and whether you want it open is a
+      // lasting preference rather than a per-visit one — so it persists.
+      detailsOpen: true,
       // sync status — non-persisted, driven by lib/sync.js
       syncState: "idle", // "idle" | "syncing" | "synced" | "error"
       lastSyncAt: null,
@@ -107,6 +110,7 @@ export const useHoard = create(
       setEditingId: (editingId) => set({ editingId }),
       setRenamingId: (renamingId) => set({ renamingId }),
       setExportOpen: (exportOpen) => set({ exportOpen }),
+      toggleDetails: () => set((s) => ({ detailsOpen: !s.detailsOpen })),
 
       // ---- metadata enrichment ----
       // The fetch is slow enough to land after the user has moved on, so the
@@ -345,7 +349,7 @@ export const useHoard = create(
     {
       name: "hoard",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ items: s.items, tombstones: s.tombstones, view: s.view, sort: s.sort }),
+      partialize: (s) => ({ items: s.items, tombstones: s.tombstones, view: s.view, sort: s.sort, detailsOpen: s.detailsOpen }),
     }
   )
   )

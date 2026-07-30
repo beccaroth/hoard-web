@@ -12,6 +12,7 @@ import TagEditor from "./components/TagEditor.jsx";
 import AuthControl from "./components/AuthControl.jsx";
 import CommandPalette from "./components/CommandPalette.jsx";
 import SearchBox from "./components/SearchBox.jsx";
+import DetailsPanel from "./components/DetailsPanel.jsx";
 import StashModal from "./components/StashModal.jsx";
 import ThemeToggle, { readTheme } from "./components/ThemeToggle.jsx";
 import { useHoard, selectVisible, parseQuery, matchesItem, sortByAdded, SECTIONS } from "./store.js";
@@ -23,7 +24,7 @@ const KEYS = [
   { k: ["c"], lab: "copy" }, { k: ["e"], lab: "rename" }, { k: ["r"], lab: "refresh" },
   { k: ["t"], lab: "tag" }, { k: ["s"], lab: "later" }, { k: ["a"], lab: "archive" },
   { k: ["d"], lab: "delete" }, { k: ["u"], lab: "undo" }, { k: ["1-4"], lab: "views" },
-  { k: ["⌘k"], lab: "search" },
+  { k: ["i"], lab: "details" }, { k: ["⌘k"], lab: "search" },
 ];
 
 // An empty view should name the thing that fills it rather than shrug.
@@ -77,6 +78,7 @@ export default function App() {
   const editingId = useHoard((s) => s.editingId);
   const renamingId = useHoard((s) => s.renamingId);
   const exportOpen = useHoard((s) => s.exportOpen);
+  const detailsOpen = useHoard((s) => s.detailsOpen);
 
   const fileRef = useRef(null);
   const searchRef = useRef(null);
@@ -118,6 +120,7 @@ export default function App() {
   const allTags = useMemo(() => [...new Set(items.flatMap((i) => i.tags || []))].sort(), [items]);
   const parsedQuery = useMemo(() => parseQuery(query, allTags), [query, allTags]);
   const editingItem = editingId ? items.find((i) => i.id === editingId) : null;
+  const selItem = selId ? items.find((i) => i.id === selId) : null;
   const single = view !== "all";
   const countFor = (key) => (key === "all" ? items.length : items.filter((i) => i.state === key).length);
   // The modal needs the dedupe keys to say what it will skip before you commit.
@@ -184,6 +187,7 @@ export default function App() {
         case "a": e.preventDefault(); s.act("archived"); break;
         case "d": e.preventDefault(); s.act("delete"); break;
         case "t": e.preventDefault(); if (s.selId) s.setEditingId(s.selId); break;
+        case "i": e.preventDefault(); s.toggleDetails(); break;
         case "u": e.preventDefault(); s.undo(); break;
         case "1": e.preventDefault(); s.setView("all"); break;
         case "2": e.preventDefault(); s.setView("inbox"); break;
@@ -308,7 +312,7 @@ export default function App() {
         </div>
       </header>
 
-      <main>
+      <main className={detailsOpen ? "details-open" : "details-shut"}>
         <section className="right">
           <div className={"tabs" + (searchOpen ? " searching" : "")}>
             <div className="tabs-left">
@@ -436,6 +440,24 @@ export default function App() {
             );
           })}
         </section>
+
+        {/* Desktop only (hidden under 900px by the stylesheet) — the phone
+            already has the actions sheet, and there's no room beside the
+            catalog for a second column. */}
+        <DetailsPanel
+          item={selItem}
+          open={detailsOpen}
+          tagFilter={tagFilter}
+          onToggle={() => useHoard.getState().toggleDetails()}
+          onOpen={() => selItem && window.open(selItem.url, "_blank")}
+          onCopy={() => useHoard.getState().copyUrl()}
+          onRename={() => selItem && useHoard.getState().setRenamingId(selItem.id)}
+          onRefresh={() => selItem && useHoard.getState().refresh(selItem.id)}
+          onTag={() => selItem && useHoard.getState().setEditingId(selItem.id)}
+          onFilterTag={(t) => useHoard.getState().toggleTagFilter(t)}
+          onMove={(state) => useHoard.getState().act(state)}
+          onDelete={() => useHoard.getState().act("delete")}
+        />
       </main>
 
       {editingItem && (
