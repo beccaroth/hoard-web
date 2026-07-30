@@ -93,6 +93,11 @@ export const useHoard = create(
       // The details sidebar is desktop-only, and whether you want it open is a
       // lasting preference rather than a per-visit one — so it persists.
       detailsOpen: true,
+      // Triage is a sitting, not a place: it always opens on whatever the inbox
+      // holds right now, so reopening the app in it would be a surprise. Lives
+      // in the store rather than in App's own state only so the global key
+      // handler — bound once, reading getState() — can see it and stand down.
+      triageOpen: false,
       // sync status — non-persisted, driven by lib/sync.js
       syncState: "idle", // "idle" | "syncing" | "synced" | "error"
       lastSyncAt: null,
@@ -111,6 +116,7 @@ export const useHoard = create(
       setRenamingId: (renamingId) => set({ renamingId }),
       setExportOpen: (exportOpen) => set({ exportOpen }),
       toggleDetails: () => set((s) => ({ detailsOpen: !s.detailsOpen })),
+      setTriageOpen: (triageOpen) => set({ triageOpen }),
 
       // ---- metadata enrichment ----
       // The fetch is slow enough to land after the user has moved on, so the

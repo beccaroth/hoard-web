@@ -4,7 +4,7 @@ import { Toaster, toast } from "sonner";
 import {
   Download, Upload, Copy, FileText, Braces,
   Layers, Inbox, Clock, Archive, Trash2,
-  Keyboard, Plus, X, ArrowDownWideNarrow, ArrowUpWideNarrow, Search,
+  Keyboard, Plus, X, ArrowDownWideNarrow, ArrowUpWideNarrow, Search, ListChecks,
 } from "lucide-react";
 import Row from "./components/Row.jsx";
 import RowActions from "./components/RowActions.jsx";
@@ -14,6 +14,7 @@ import CommandPalette from "./components/CommandPalette.jsx";
 import SearchBox from "./components/SearchBox.jsx";
 import DetailsPanel from "./components/DetailsPanel.jsx";
 import StashModal from "./components/StashModal.jsx";
+import TriageView from "./components/TriageView.jsx";
 import ThemeToggle, { readTheme } from "./components/ThemeToggle.jsx";
 import { useHoard, selectVisible, parseQuery, matchesItem, sortByAdded, SECTIONS } from "./store.js";
 import { normalizeUrl } from "./lib/urls.js";
@@ -24,7 +25,15 @@ const KEYS = [
   { k: ["c"], lab: "copy" }, { k: ["e"], lab: "rename" }, { k: ["r"], lab: "refresh" },
   { k: ["t"], lab: "tag" }, { k: ["s"], lab: "later" }, { k: ["a"], lab: "archive" },
   { k: ["d"], lab: "delete" }, { k: ["u"], lab: "undo" }, { k: ["1-4"], lab: "views" },
-  { k: ["i"], lab: "details" }, { k: ["⌘k"], lab: "search" },
+  { k: ["i"], lab: "details" }, { k: ["⇧t"], lab: "triage" }, { k: ["⌘k"], lab: "search" },
+];
+
+// Inside triage the letters mean the same verbs, but they act on the card in
+// front of you rather than on the catalog's selection.
+const TRIAGE_KEYS = [
+  { k: ["a"], lab: "archive" }, { k: ["s"], lab: "later" }, { k: ["space"], lab: "skip" },
+  { k: ["t"], lab: "tag" }, { k: ["e"], lab: "rename" }, { k: ["o"], lab: "open" },
+  { k: ["u"], lab: "undo" }, { k: ["esc"], lab: "leave" },
 ];
 
 // An empty view should name the thing that fills it rather than shrug.
@@ -79,6 +88,7 @@ export default function App() {
   const renamingId = useHoard((s) => s.renamingId);
   const exportOpen = useHoard((s) => s.exportOpen);
   const detailsOpen = useHoard((s) => s.detailsOpen);
+  const triageOpen = useHoard((s) => s.triageOpen);
 
   const fileRef = useRef(null);
   const searchRef = useRef(null);
@@ -164,6 +174,10 @@ export default function App() {
   // global keyboard — bound once; reads live state via getState()
   useEffect(() => {
     function onKey(e) {
+      // Triage runs the keyboard while it's up — the same letters mean the same
+      // verbs there, but aimed at the card rather than the catalog's selection,
+      // and `a` filing a row you can't see would be the worst kind of surprise.
+      if (useHoard.getState().triageOpen) return;
       // ⌘K / Ctrl+K toggles the palette from anywhere (even inputs)
       if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
@@ -175,6 +189,9 @@ export default function App() {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "/") { e.preventDefault(); searchRef.current?.focus(); return; }
       if (e.key === "n" || e.key === "N") { e.preventDefault(); setStashOpen(true); return; }
+      // Shift-T, because plain `t` is already tagging. A mode deserves a key
+      // you can't fall onto by accident.
+      if (e.key === "T") { e.preventDefault(); useHoard.getState().setTriageOpen(true); return; }
       const s = useHoard.getState();
       switch (e.key) {
         case "j": case "ArrowDown": e.preventDefault(); s.moveSel(1); break;
@@ -274,6 +291,18 @@ export default function App() {
         <div className="header-right">
           <button className="stash-btn" onClick={() => setStashOpen(true)}>
             ＋ Stash Link <kbd>N</kbd>
+          </button>
+          {/* The count is the point as much as the button is: it's the only
+              place that says whether there's a pile worth sitting down to. */}
+          <button
+            className="btn-ghost icon-btn triage-trigger"
+            title="Triage the inbox (⇧T)"
+            aria-label={`Triage the inbox, ${countFor("inbox")} waiting`}
+            onClick={() => useHoard.getState().setTriageOpen(true)}
+          >
+            <ListChecks size={15} />
+            <span className="triage-label">Triage</span>
+            {countFor("inbox") > 0 && <span className="triage-n">{countFor("inbox")}</span>}
           </button>
           <div className="legend">
             {KEYS.map((p) => (
@@ -522,6 +551,7 @@ export default function App() {
           items={items}
           commands={[
             { id: "stash", label: "Stash links…", hint: "n", icon: <Plus size={16} />, run: () => setStashOpen(true) },
+            { id: "triage", label: "Triage the inbox", hint: "⇧t", icon: <ListChecks size={16} />, run: () => useHoard.getState().setTriageOpen(true) },
             { id: "v-all", label: "Go to All", hint: "1", icon: <Layers size={16} />, run: () => useHoard.getState().setView("all") },
             { id: "v-inbox", label: "Go to Inbox", hint: "2", icon: <Inbox size={16} />, run: () => useHoard.getState().setView("inbox") },
             { id: "v-later", label: "Go to Saved for Later", hint: "3", icon: <Clock size={16} />, run: () => useHoard.getState().setView("later") },
@@ -547,6 +577,27 @@ export default function App() {
         <Plus size={22} strokeWidth={2.4} />
       </button>
 
+      {/* Sits under the toaster and the tag bar by design — an undo you can't
+          see is no undo, and tagging from inside triage docks the same editor
+          the catalog uses. */}
+      {triageOpen && (
+        <TriageView
+          items={items}
+          sort={sort}
+          onClose={() => useHoard.getState().setTriageOpen(false)}
+          /* Routed through the store's own act() so a triage decision lands in
+             the same undo stack, and reads the same, as one made from a row. */
+          onAct={(id, action) => {
+            useHoard.getState().setSelId(id);
+            useHoard.getState().act(action);
+          }}
+          onTag={(id) => useHoard.getState().setEditingId(id)}
+          onRename={(id, title) => useHoard.getState().renameItem(id, title)}
+          onOpen={(url) => window.open(url, "_blank")}
+          onUndo={() => useHoard.getState().undo()}
+        />
+      )}
+
       {stashOpen && (
         <StashModal
           existingUrls={existingUrls}
@@ -570,6 +621,15 @@ export default function App() {
             </div>
             <div className="help-list">
               {KEYS.map((p) => (
+                <div className="help-row" key={p.lab}>
+                  <div className="help-keys">
+                    {p.k.map((k) => <kbd key={k}>{k}</kbd>)}
+                  </div>
+                  <div className="help-lab">{p.lab}</div>
+                </div>
+              ))}
+              <div className="help-group">In triage</div>
+              {TRIAGE_KEYS.map((p) => (
                 <div className="help-row" key={p.lab}>
                   <div className="help-keys">
                     {p.k.map((k) => <kbd key={k}>{k}</kbd>)}
