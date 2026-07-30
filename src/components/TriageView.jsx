@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, Archive, Clock, ChevronsRight, Tag, Pencil, ExternalLink } from "lucide-react";
+import { X, Archive, Clock, ChevronsRight, Tag, Pencil, ExternalLink, Trash2 } from "lucide-react";
 import { domain } from "../lib/urls.js";
 import { ago } from "../lib/time.js";
 import { sortByAdded } from "../store.js";
@@ -15,6 +15,10 @@ import { sortByAdded } from "../store.js";
 // comes back next time.
 export default function TriageView({ items, sort, onClose, onAct, onTag, onRename, onOpen, onUndo, onNeedMeta }) {
   const [skipped, setSkipped] = useState(() => new Set());
+  // Counted rather than derived: a deleted item leaves `items` entirely, so
+  // there's nothing left to look at afterwards to tell it apart from one that
+  // was filed. Undo puts the link back in the queue, so it walks back too.
+  const [deleted, setDeleted] = useState(0);
   // null when not renaming — an empty string is a legitimate draft.
   const [draft, setDraft] = useState(null);
   const inputRef = useRef(null);
@@ -41,12 +45,14 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
   // Always the head of the queue: filing an item or skipping it takes it out,
   // and the next one moves up on its own. No cursor to keep in step.
   const item = queue[0];
-  // Two different numbers, and they aren't interchangeable: `done` is how far
-  // through the pile you are, which a skip advances — it's what the counter and
-  // the bar measure. `filed` is how many actually went somewhere, which is what
-  // the summary at the end should claim credit for.
+  // Three different numbers, and they aren't interchangeable. `done` is how far
+  // through the pile you are — a skip and a delete both advance it, and it's
+  // what the counter and the bar measure. `filed` is how many actually went
+  // somewhere, which is the only one the summary should claim credit for: a
+  // deleted link didn't get filed, it got thrown away, and a skip is still
+  // sitting in the inbox waiting.
   const done = Math.max(0, total - queue.length);
-  const filed = Math.max(0, done - skipped.size);
+  const filed = Math.max(0, done - skipped.size - deleted);
 
   const startRename = () => setDraft(item.title);
 
@@ -93,6 +99,26 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
     setSkipped((s) => new Set(s).add(item.id));
   }
 
+  // What this sitting did, in order. The store's undo stack is older and wider
+  // than this view — it may well be holding something from before triage
+  // opened — so `u` can't just assume it reversed one of ours. Popping our own
+  // log tells us whether the thing coming back was a delete, and the counts
+  // walk back with it; an empty log means the undo reached past this sitting
+  // and there's nothing of ours to adjust.
+  const logRef = useRef([]);
+
+  function decide(action) {
+    if (!item) return;
+    logRef.current.push(action);
+    if (action === "delete") setDeleted((n) => n + 1);
+    onAct(item.id, action);
+  }
+
+  function undoLast() {
+    if (logRef.current.pop() === "delete") setDeleted((n) => Math.max(0, n - 1));
+    onUndo();
+  }
+
   useEffect(() => {
     function onKey(e) {
       // The tag editor and the rename field are both real inputs floating over
@@ -104,11 +130,15 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
       // Undo is the one key that has to work with the queue empty — the last
       // thing you filed is exactly what you're most likely to want back, and
       // the toast's button is gone within a few seconds.
-      if (e.key === "u") { e.preventDefault(); onUndo(); return; }
+      if (e.key === "u") { e.preventDefault(); undoLast(); return; }
       if (!item) return;
       switch (e.key) {
-        case "a": e.preventDefault(); onAct(item.id, "archived"); break;
-        case "s": e.preventDefault(); onAct(item.id, "later"); break;
+        case "a": e.preventDefault(); decide("archived"); break;
+        case "s": e.preventDefault(); decide("later"); break;
+        // No confirm, same as `d` on a row: the toast carries Undo, `u` works
+        // in here, and a delete that stops the flow to ask defeats the point of
+        // a pass through the pile.
+        case "d": e.preventDefault(); decide("delete"); break;
         // Space only. `n` would be the obvious second key for "next", but it
         // means "stash a link" everywhere else in the app, and a letter that
         // quietly does something different in here is worse than one key.
@@ -158,10 +188,18 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
           <span className="triage-done-how">
             {/* Not "press N to stash" — the global shortcuts are stood down
                 while this is up, so the only honest instruction is the way out. */}
+            {/* Each clause earns its place by being non-zero: "all 4 filed" on a
+                clean sweep, and the qualifiers only when there's something to
+                qualify. A skip is still in the inbox and a delete is gone —
+                neither is filed, and rolling them together would overstate it. */}
             {total === 0
               ? <>press <kbd>esc</kbd> to head back</>
-              : skipped.size > 0
-                ? <>{filed} filed · {skipped.size} skipped, still in your inbox</>
+              : skipped.size || deleted
+                ? [
+                    `${filed} filed`,
+                    deleted ? `${deleted} deleted` : null,
+                    skipped.size ? `${skipped.size} skipped, still in your inbox` : null,
+                  ].filter(Boolean).join(" · ")
                 : <>all {filed} filed</>}
           </span>
           <button className="triage-leave" onClick={onClose}>Done</button>
@@ -252,16 +290,24 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
 
           <div className="triage-decide">
             <div className="triage-decide-pair">
-              <button className="triage-btn triage-archive" title="Archive (a)" onClick={() => onAct(item.id, "archived")}>
+              <button className="triage-btn triage-archive" title="Archive (a)" onClick={() => decide("archived")}>
                 <Archive size={16} /> Archive
               </button>
-              <button className="triage-btn triage-later" title="Save for later (s)" onClick={() => onAct(item.id, "later")}>
+              <button className="triage-btn triage-later" title="Save for later (s)" onClick={() => decide("later")}>
                 <Clock size={16} /> Save for Later
               </button>
             </div>
-            <button className="triage-btn triage-skip" title="Skip for now (space)" onClick={skip}>
-              <ChevronsRight size={16} /> Skip for Now
-            </button>
+            {/* The two ways of not filing it, on their own line beneath the two
+                that do. Skip keeps the width because it's the one you reach for
+                often; delete is deliberately the smaller target of the pair. */}
+            <div className="triage-decide-tail">
+              <button className="triage-btn triage-skip" title="Skip for now (space)" onClick={skip}>
+                <ChevronsRight size={16} /> Skip for Now
+              </button>
+              <button className="triage-btn triage-delete" title="Delete (d)" onClick={() => decide("delete")}>
+                <Trash2 size={16} /> Delete
+              </button>
+            </div>
           </div>
         </>
       )}

@@ -1857,6 +1857,9 @@ header, .right { animation: fade .45s ease both; }
 
 .triage-decide { display: flex; flex-direction: column; gap: 9px; padding-top: 14px; flex-shrink: 0; }
 .triage-decide-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+/* Skip takes the lion's share: it's the one reached for often, and delete
+   being the smaller target of the two is the point rather than an accident. */
+.triage-decide-tail { display: grid; grid-template-columns: 2fr 1fr; gap: 9px; }
 .triage-btn {
   display: flex;
   align-items: center;
@@ -1891,6 +1894,21 @@ header, .right { animation: fade .45s ease both; }
 }
 .triage-skip:hover { color: var(--ink); border-color: var(--muted); background: var(--surface-2); }
 .triage-skip:hover svg { color: var(--muted); }
+/* Dashed like skip, because neither files the link — but wearing the same red
+   the row sheet and the details panel already use for delete, so it reads as
+   the destructive one before it's pressed rather than after. */
+.triage-delete {
+  background: transparent;
+  border-style: dashed;
+  color: #c54a3a;
+  font-weight: 600;
+}
+.triage-delete svg { color: #c54a3a; }
+.triage-delete:hover {
+  border-style: solid;
+  border-color: #c54a3a;
+  background: rgba(197,74,58,.10);
+}
 
 .triage-done {
   flex: 1;
