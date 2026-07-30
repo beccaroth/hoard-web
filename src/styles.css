@@ -1603,7 +1603,10 @@ header, .right { animation: fade .45s ease both; }
 .stash-fab:active { transform: translateY(1px); }
 .stash-fab.hidden { display: none; }
 
-/* ---------- row actions sheet (mobile long-press) ---------- */
+/* ---------- details sheet (mobile long-press / ⋯) ----------
+   The phone's answer to the sidebar: the same facts, then the actions the
+   keyboard shortcuts reach on a desktop. Sized against the viewport because
+   the facts alone can outrun a short screen. */
 .row-actions-backdrop {
   position: fixed;
   inset: 0;
@@ -1618,6 +1621,7 @@ header, .right { animation: fade .45s ease both; }
 .row-actions-sheet {
   width: 100%;
   max-width: 480px;
+  max-height: 88vh;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px 16px 0 0;
@@ -1626,43 +1630,61 @@ header, .right { animation: fade .45s ease both; }
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 0;
 }
 .row-actions-head {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 4px 4px 8px;
-  border-bottom: 1px solid var(--border-2);
-}
-.row-actions-title {
-  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  flex: 1;
-  min-width: 0;
-}
-.row-actions-fav {
-  width: 26px; height: 26px;
-  border-radius: 7px;
+  padding: 2px 4px 9px;
+  border-bottom: 1px solid var(--border-2);
   flex-shrink: 0;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  object-fit: contain;
-  padding: 2px;
 }
-.row-actions-meta { min-width: 0; flex: 1; }
-.row-actions-name {
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  font-weight: 700;
-  font-size: 14px;
+/* The scrolling half. `min-height: 0` is what lets it actually shrink inside
+   the flex column instead of pushing the sheet past its max-height. */
+.row-actions-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.row-actions-url {
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 11px;
-  margin-top: 1px;
+.row-actions-scroll::-webkit-scrollbar { width: 10px; }
+.row-actions-scroll::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border: 3px solid var(--surface);
+  border-radius: 10px;
 }
+
+/* The facts are the sidebar's, at a size a thumb and an arm's length can deal
+   with — the sidebar's mono labels are drawn for a dense desktop column. */
+.sheet-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 4px 2px;
+}
+.sheet-facts .details-fav { width: 38px; height: 38px; border-radius: 10px; }
+.sheet-facts .details-fav .fav-letter { font-size: 17px; }
+.sheet-facts .details-fav .fav { width: 22px; height: 22px; }
+.sheet-facts .details-title { font-size: 17px; }
+.sheet-facts .details-domain { font-size: 10.5px; }
+.sheet-facts .details-url { font-size: 11px; padding: 10px 11px; }
+.sheet-facts .details-fact { grid-template-columns: 74px 1fr; }
+.sheet-facts .details-fact dt { font-size: 9px; }
+.sheet-facts .details-fact dd { font-size: 13px; }
+.sheet-facts .details-ago { font-size: 10px; }
+.sheet-facts .details-eyebrow { font-size: 9px; }
+.sheet-facts .details-none { font-size: 10.5px; }
+/* Tapped, not hovered — the label needs a hit area of its own. It grows
+   inwards only: a negative right margin would hang it over the sheet's edge
+   and give the whole panel a couple of pixels of sideways scroll. */
+.sheet-facts .details-link-btn { font-size: 9px; padding: 6px 0 6px 10px; margin: -6px 0; }
+.sheet-facts .chip { font-size: 11px; padding: 5px 11px; }
+
 .row-actions-close {
   display: grid;
   place-items: center;
