@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { ExternalLink, Pencil, Tag, RotateCw, Inbox, Clock, Archive, Trash2, X } from "lucide-react";
+import { ExternalLink, Copy, Pencil, Tag, RotateCw, Inbox, Clock, Archive, Trash2, X } from "lucide-react";
+import ItemFacts from "./ItemFacts.jsx";
 
 const MOVE_OPTIONS = [
   { key: "inbox", label: "Move to Inbox", Icon: Inbox },
@@ -7,7 +8,15 @@ const MOVE_OPTIONS = [
   { key: "archived", label: "Archive", Icon: Archive },
 ];
 
-export default function RowActions({ item, onClose, onOpen, onRename, onTag, onRefresh, onMove, onDelete }) {
+// The phone's details panel. The sidebar is hidden under 900px and there's no
+// room to bring it back, so the sheet the row already opened for its actions
+// carries the facts too — status, both timestamps, the whole URL, every tag —
+// rather than leaving them unreachable on the device most of the triaging
+// happens on.
+export default function RowActions({
+  item, tagFilter,
+  onClose, onOpen, onCopy, onRename, onTag, onRefresh, onFilterTag, onMove, onDelete,
+}) {
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
     window.addEventListener("keydown", onKey);
@@ -16,48 +25,61 @@ export default function RowActions({ item, onClose, onOpen, onRename, onTag, onR
 
   return (
     <div className="row-actions-backdrop" onClick={onClose}>
-      <div className="row-actions-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Row actions">
+      <div
+        className="row-actions-sheet"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label={`Details for ${item.title}`}
+      >
         <div className="row-actions-head">
-          <div className="row-actions-title">
-            <img
-              className="row-actions-fav"
-              src={item.favicon}
-              alt=""
-              onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
-            />
-            <div className="row-actions-meta">
-              <div className="row-actions-name">{item.title}</div>
-              <div className="row-actions-url">{item.url}</div>
-            </div>
-          </div>
+          <span className="details-eyebrow">Details</span>
           <button className="row-actions-close" aria-label="Close" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
 
-        <div className="row-actions-list">
-          <button className="row-action" onClick={onOpen}>
-            <ExternalLink size={16} /> Open link
-          </button>
-          <button className="row-action" onClick={onRename}>
-            <Pencil size={16} /> Rename
-          </button>
-          <button className="row-action" onClick={onTag}>
-            <Tag size={16} /> Edit tags
-          </button>
-          <button className="row-action" onClick={onRefresh} disabled={item.loading}>
-            <RotateCw size={16} /> Refresh metadata
-          </button>
-          <div className="row-actions-sep" />
-          {MOVE_OPTIONS.filter((o) => o.key !== item.state).map((o) => (
-            <button key={o.key} className="row-action" onClick={() => onMove(o.key)}>
-              <o.Icon size={16} /> {o.label}
+        {/* Facts and actions scroll together: a long title, a full URL and a
+            dozen tags can outgrow the sheet, and pinning the list while the
+            facts scroll would cost the actions half the screen on a phone. */}
+        <div className="row-actions-scroll">
+          <div className="sheet-facts">
+            <ItemFacts
+              item={item}
+              tagFilter={tagFilter}
+              onFilterTag={onFilterTag}
+              onTag={onTag}
+            />
+          </div>
+
+          <div className="row-actions-list">
+            <button className="row-action" onClick={onOpen}>
+              <ExternalLink size={16} /> Open link
             </button>
-          ))}
-          <div className="row-actions-sep" />
-          <button className="row-action row-action-danger" onClick={onDelete}>
-            <Trash2 size={16} /> Delete
-          </button>
+            {/* No `c` shortcut without a keyboard, so copying lived only on the
+                desktop panel until now. */}
+            <button className="row-action" onClick={onCopy}>
+              <Copy size={16} /> Copy URL
+            </button>
+            <button className="row-action" onClick={onRename}>
+              <Pencil size={16} /> Rename
+            </button>
+            <button className="row-action" onClick={onTag}>
+              <Tag size={16} /> Edit tags
+            </button>
+            <button className="row-action" onClick={onRefresh} disabled={item.loading}>
+              <RotateCw size={16} /> {item.loading ? "Reading…" : "Refresh metadata"}
+            </button>
+            <div className="row-actions-sep" />
+            {MOVE_OPTIONS.filter((o) => o.key !== item.state).map((o) => (
+              <button key={o.key} className="row-action" onClick={() => onMove(o.key)}>
+                <o.Icon size={16} /> {o.label}
+              </button>
+            ))}
+            <div className="row-actions-sep" />
+            <button className="row-action row-action-danger" onClick={onDelete}>
+              <Trash2 size={16} /> Delete
+            </button>
+          </div>
         </div>
       </div>
     </div>

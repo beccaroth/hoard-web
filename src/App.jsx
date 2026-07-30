@@ -476,10 +476,22 @@ export default function App() {
         return (
           <RowActions
             item={it}
+            tagFilter={tagFilter}
             onClose={() => setActionsId(null)}
             onOpen={() => { window.open(it.url, "_blank"); setActionsId(null); }}
+            onCopy={() => {
+              useHoard.getState().setSelId(it.id);
+              useHoard.getState().copyUrl();
+              setActionsId(null);
+            }}
             onTag={() => {
               useHoard.getState().setEditingId(it.id);
+              setActionsId(null);
+            }}
+            /* Tapping a tag here means "show me the rest of these", so the
+               sheet gets out of the way rather than sitting over the result. */
+            onFilterTag={(t) => {
+              useHoard.getState().toggleTagFilter(t);
               setActionsId(null);
             }}
             onRename={() => {

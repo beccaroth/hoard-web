@@ -392,12 +392,13 @@ export default function Row({
         </button>
 
         {/* The same sheet long-press opens — the tappable way in on touch
-            devices, where there's no hover and no keyboard shortcuts. */}
+            devices, where there's no hover, no keyboard shortcuts and no
+            details sidebar. */}
         {!renaming && (
           <button
             className="row-btn more-btn"
-            title="More actions"
-            aria-label={`More actions for ${item.title}`}
+            title="Details & actions"
+            aria-label={`Details and actions for ${item.title}`}
             aria-haspopup="dialog"
             tabIndex={rove}
             onClick={(e) => { e.stopPropagation(); onSelect(); onActions?.(); }}
