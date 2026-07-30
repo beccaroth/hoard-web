@@ -9,7 +9,8 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open [http://localhost:5173](http://localhost:5173). Set `PORT` to run somewhere
+else — handy when another worktree already has 5173.
 
 ## Build
 
