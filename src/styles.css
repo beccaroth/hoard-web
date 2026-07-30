@@ -1291,6 +1291,30 @@ header, .right { animation: fade .45s ease both; }
   color: var(--muted);
 }
 
+/* The page's own preview, above its URL — what the item is, before where it
+   lives. Held to a shallow band so it introduces the item rather than becoming
+   the panel. */
+.details-image {
+  width: 100%;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  display: block;
+}
+.details-description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .details-url {
   display: flex;
   align-items: flex-start;
@@ -1754,6 +1778,50 @@ header, .right { animation: fade .45s ease both; }
 .triage-open svg { flex-shrink: 0; margin-top: 2px; }
 .triage-open-url { min-width: 0; }
 
+/* The preview owns the slack in the card, so a page with a lot to say fills it
+   and one with nothing doesn't stretch to pretend otherwise. */
+.triage-preview {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* The image is what gives when the card runs short — it's usually a site's
+   generic banner, while the description is the page actually telling you what
+   it is. Letting the text shrink instead clipped it mid-sentence, and a flex
+   crop gets no ellipsis, so it just stopped. */
+.triage-image {
+  width: 100%;
+  flex: 0 1 auto;
+  min-height: 80px;
+  max-height: 260px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.triage-description {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  /* Capped at the source, but a 300-char description still shouldn't push the
+     decisions off a short screen — clamp it, with the ellipsis line-clamp adds. */
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.triage-preview-none {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .04em;
+  color: var(--faint);
+}
+
 .triage-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .triage-added {
   font-family: var(--mono);
@@ -1891,6 +1959,9 @@ header, .right { animation: fade .45s ease both; }
      instead of stranding them at the top of a tall empty page. */
   .triage-card { flex: 0 1 auto; max-height: 60vh; margin-top: auto; }
   .triage-decide { margin-bottom: auto; padding-bottom: 4px; }
+  /* 60vh of card is a tighter budget than a phone's full height, so the banner
+     takes less of it and leaves the words room. */
+  .triage-image { max-height: 190px; }
 }
 
 /* ---------- details sheet (mobile long-press / ⋯) ----------
@@ -1963,6 +2034,8 @@ header, .right { animation: fade .45s ease both; }
 .sheet-facts .details-title { font-size: 17px; }
 .sheet-facts .details-domain { font-size: 10.5px; }
 .sheet-facts .details-url { font-size: 11px; padding: 10px 11px; }
+.sheet-facts .details-image { max-height: 180px; }
+.sheet-facts .details-description { font-size: 13.5px; -webkit-line-clamp: 6; }
 .sheet-facts .details-fact { grid-template-columns: 74px 1fr; }
 .sheet-facts .details-fact dt { font-size: 9px; }
 .sheet-facts .details-fact dd { font-size: 13px; }
