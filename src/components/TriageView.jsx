@@ -13,13 +13,16 @@ import { sortByAdded } from "../store.js";
 // outlived the sitting would just be a second, vaguer version of it. Here it
 // means "don't ask me again on this pass"; the item stays in the inbox and
 // comes back next time.
-export default function TriageView({ items, sort, onClose, onAct, onTag, onRename, onOpen, onUndo }) {
+export default function TriageView({ items, sort, onClose, onAct, onTag, onRename, onOpen, onUndo, onNeedMeta }) {
   const [skipped, setSkipped] = useState(() => new Set());
   // null when not renaming — an empty string is a legitimate draft.
   const [draft, setDraft] = useState(null);
   const inputRef = useRef(null);
   const cancelledRef = useRef(false);
   const rootRef = useRef(null);
+  // The preview URL that 404'd, if any — a dead og:image should leave no trace
+  // rather than a broken-image box in the middle of the card.
+  const [failedImg, setFailedImg] = useState(null);
 
   // Opening from the header button leaves the caret on that button, which is
   // now behind a full-screen dialog: Tab would walk the catalog nobody can see,
@@ -59,6 +62,25 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
 
   // A rename left open when the card moves on would land on the wrong item.
   useEffect(() => { setDraft(null); }, [item?.id]);
+
+  // Anything stashed before descriptions existed has none, and a hoard doesn't
+  // re-enrich itself. Fetch for the card actually in front of you: the pile
+  // fills in as you work it, and nothing is fetched for links you never reach.
+  // `undefined` means never looked; "" means looked and the page had nothing.
+  //
+  // The attempt is remembered here rather than inferred from the item, because
+  // a lookup that fails leaves the item exactly as it found it — no description,
+  // loading back to false — which reads identically to never having tried. That
+  // sent it round again the moment the flag cleared, and again, in a loop that
+  // only stopped when the card changed. One attempt per link per sitting; a
+  // page that was simply unreachable gets another chance next time.
+  const triedRef = useRef(new Set());
+  useEffect(() => {
+    if (!item || item.loading || item.description !== undefined) return;
+    if (triedRef.current.has(item.id)) return;
+    triedRef.current.add(item.id);
+    onNeedMeta?.(item.id, item.url);
+  }, [item?.id, item?.description, item?.loading]);
 
   function commitRename() {
     if (cancelledRef.current || draft === null || !item) return;
@@ -182,13 +204,32 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
               </div>
             </div>
 
-            {/* The card's empty middle in the sketch is the part that tells you
-                whether you want this at all — so it's the link itself, at a
-                size you can hit without aiming. */}
             <button className="triage-open" onClick={() => onOpen(item.url)} title="Open link (o)">
               <ExternalLink size={15} />
               <span className="triage-open-url">{item.url}</span>
             </button>
+
+            {/* What the sketch's empty middle is for: the page's own account of
+                itself, which is the difference between deciding from a URL and
+                deciding from the thing. */}
+            <div className="triage-preview">
+              {item.image && failedImg !== item.image && (
+                <img
+                  className="triage-image"
+                  src={item.image}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  onError={() => setFailedImg(item.image)}
+                />
+              )}
+              {item.description
+                ? <p className="triage-description">{item.description}</p>
+                : item.loading
+                  ? <span className="triage-preview-none">reading the page…</span>
+                  : item.description === "" && !item.image
+                    ? <span className="triage-preview-none">no description on this one</span>
+                    : null}
+            </div>
 
             <div className="triage-meta">
               <span className="triage-added">stashed {ago(item.added)}</span>

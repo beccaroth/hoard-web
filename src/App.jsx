@@ -595,6 +595,10 @@ export default function App() {
           onRename={(id, title) => useHoard.getState().renameItem(id, title)}
           onOpen={(url) => window.open(url, "_blank")}
           onUndo={() => useHoard.getState().undo()}
+          /* Backfill for links stashed before descriptions existed. keepTitle,
+             because this is a late top-up of a card you're looking at — having
+             the title change under you mid-decision would be its own bug. */
+          onNeedMeta={(id, url) => useHoard.getState().enrich(id, url, { keepTitle: true })}
         />
       )}
 

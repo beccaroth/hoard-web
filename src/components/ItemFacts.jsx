@@ -11,6 +11,9 @@ const STATE_WORD = { inbox: "Inbox", later: "Saved for later", archived: "Archiv
 export default function ItemFacts({ item, tagFilter, onFilterTag, onTag }) {
   // The favicon URL that 404'd, if any — see the img below.
   const [failedFav, setFailedFav] = useState(null);
+  // Same trick for the preview: og:image points at someone else's host, and a
+  // dead link there should leave no trace rather than a broken-image box.
+  const [failedImg, setFailedImg] = useState(null);
 
   return (
     <>
@@ -38,6 +41,21 @@ export default function ItemFacts({ item, tagFilter, onFilterTag, onTag }) {
           <span className="details-domain">{domain(item.url)}</span>
         </div>
       </div>
+
+      {item.image && failedImg !== item.image && (
+        <img
+          className="details-image"
+          src={item.image}
+          alt=""
+          loading="lazy"
+          /* Someone else's host, and a referrer that leaks which links you keep
+             is not a thing to hand over for a thumbnail. */
+          referrerPolicy="no-referrer"
+          onError={() => setFailedImg(item.image)}
+        />
+      )}
+
+      {item.description && <p className="details-description">{item.description}</p>}
 
       <a className="details-url" href={item.url} target="_blank" rel="noreferrer">
         <span className="details-url-text">{item.url}</span>

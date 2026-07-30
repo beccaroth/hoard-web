@@ -134,7 +134,18 @@ export const useHoard = create(
             items: s.items.map((i) => {
               if (i.id !== id) return i;
               const hold = keepTitle || i.titleEdited || s.renamingId === id;
-              return { ...i, title: hold ? i.title : (data.title || i.title), favicon: data.favicon || i.favicon, loading: false, updatedAt: Date.now() };
+              return {
+                ...i,
+                title: hold ? i.title : (data.title || i.title),
+                favicon: data.favicon || i.favicon,
+                // Written even when empty. An item that has been looked at and
+                // has no description holds "", which is what tells the triage
+                // card not to go asking again every time it comes round.
+                description: typeof data.description === "string" ? data.description : (i.description || ""),
+                image: data.image || i.image || null,
+                loading: false,
+                updatedAt: Date.now(),
+              };
             }),
           }));
         } catch {

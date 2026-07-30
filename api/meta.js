@@ -1,6 +1,39 @@
 // Vercel serverless function: GET /api/meta?url=<encoded>
-// Returns { url, title, favicon } using oEmbed → scrape → Microlink → slug,
-// the same strategy as the standalone Node server. Runs on Node (global fetch).
+// Returns { url, title, favicon, description, image } using oEmbed → scrape →
+// Microlink → slug, the same strategy as the standalone Node server. Runs on
+// Node (global fetch).
+
+// Descriptions ride along in the synced blob, so they're capped rather than
+// stored at whatever length a page felt like emitting. Long enough to say what
+// a page is; short enough that a few thousand of them stay cheap.
+const DESC_MAX = 300;
+
+// Meta tags come in both attribute orders in the wild — `property` before
+// `content` and the other way round — so match either rather than assuming.
+function metaContent(html, attr, value) {
+  const v = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [
+    new RegExp(`<meta[^>]+${attr}=["']${v}["'][^>]*content=["']([^"']*)["']`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]*${attr}=["']${v}["']`, "i"),
+  ];
+  for (const re of patterns) {
+    const m = html.match(re);
+    if (m && m[1]) return m[1];
+  }
+  return null;
+}
+
+function cleanText(raw, max) {
+  if (!raw) return "";
+  const s = decodeEntities(raw)
+    .replace(/\s+/g, " ")
+    .trim();
+  if (s.length <= max) return s;
+  // Trim at a word boundary so the tail doesn't end mid-word.
+  const cut = s.slice(0, max);
+  const sp = cut.lastIndexOf(" ");
+  return (sp > max * 0.6 ? cut.slice(0, sp) : cut).trimEnd() + "…";
+}
 
 function decodeEntities(s) {
   const named = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
@@ -73,6 +106,8 @@ async function microlinkMeta(target) {
     return {
       title: d.title ? String(d.title).trim() : null,
       favicon: (d.logo && d.logo.url) || (d.favicon && d.favicon.url) || null,
+      description: cleanText(d.description ? String(d.description) : "", DESC_MAX),
+      image: (d.image && d.image.url) || null,
     };
   } catch {
     return null;
@@ -88,6 +123,11 @@ async function fetchMeta(target) {
     url: target,
     title: domainTitle,
     favicon: `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`,
+    // Always present, even when the page offers nothing — an empty string is
+    // how the client tells "looked, found none" apart from "never looked",
+    // which is what stops it re-fetching the same barren page forever.
+    description: "",
+    image: null,
   };
 
   const controller = new AbortController();
@@ -133,6 +173,28 @@ async function fetchMeta(target) {
         : "";
       if (scraped && !JUNK_TITLE.test(scraped) && result.title === domainTitle) {
         result.title = scraped;
+      }
+
+      // og:description is written for exactly this — a one-line answer to "what
+      // is this page" — and the plain description tag is the fallback.
+      result.description = cleanText(
+        metaContent(html, "property", "og:description")
+          || metaContent(html, "name", "og:description")
+          || metaContent(html, "name", "description")
+          || metaContent(html, "name", "twitter:description"),
+        DESC_MAX,
+      );
+
+      const rawImage =
+        metaContent(html, "property", "og:image")
+        || metaContent(html, "name", "og:image")
+        || metaContent(html, "name", "twitter:image")
+        || metaContent(html, "name", "twitter:image:src");
+      if (rawImage) {
+        const abs = absolute(decodeEntities(rawImage), finalUrl);
+        // Only the URL is kept — the image itself stays on its own host, so a
+        // preview costs the blob a couple of hundred bytes rather than a file.
+        if (abs && /^https?:/i.test(abs)) result.image = abs;
       }
 
       const iconMatch = [...html.matchAll(/<link[^>]+rel=["']([^"']*icon[^"']*)["'][^>]*>/gi)]
