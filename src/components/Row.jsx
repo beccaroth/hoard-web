@@ -40,6 +40,17 @@ function isTouch() {
   return typeof window !== "undefined" && window.matchMedia("(hover: none) and (pointer: coarse)").matches;
 }
 
+// Where a tap and a click stop agreeing. On a phone the details panel isn't on
+// screen at all, so a tap has nowhere to put the detail and opening the link is
+// the only useful thing it can mean. On a tablet the panel is right there, so a
+// tap selects — same as a click on the desktop — and opening stays on the
+// details panel's button, the actions sheet, and double-tap. Checked per
+// gesture rather than once, since rotating an iPad crosses this line.
+const TWO_PANE_MIN_PX = 901; // the width `main` grows its second column at
+function hasDetailsPanel() {
+  return typeof window !== "undefined" && window.matchMedia(`(min-width: ${TWO_PANE_MIN_PX}px)`).matches;
+}
+
 export default function Row({
   item, selected, tagFilter, renaming,
   onSelect, onOpen, onFilterTag, onRefresh, onSwipe, onActions,
@@ -218,7 +229,8 @@ export default function Row({
 
     if (Math.abs(dx) < SWIPE_THRESH && Math.abs(dy) < SWIPE_THRESH && Date.now() - t0 < 500) {
       t.current.suppressClick = true;
-      onOpen();
+      if (hasDetailsPanel()) onSelect();
+      else onOpen();
     }
   }
 
