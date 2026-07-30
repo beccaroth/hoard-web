@@ -26,6 +26,13 @@ const SWIPE_THRESH = 10;
 const LONG_PRESS_MS = 500;
 const PRESS_VISUAL_MS = 200;
 
+// About what the row's tag column has ever had room for — three chips is what
+// the strip's 280px holds on a desktop row, and what a phone's tag line holds
+// before it becomes a tag cloud. Past that they collapse behind a +N that names
+// them in its tooltip and expands the rest in place: hidden is fine,
+// unreachable isn't, since the chips are also how you filter.
+const COMPACT_TAGS = 3;
+
 // Gestures key off the input device, not the window width: a tablet is wide
 // enough for the two-pane layout but still has no hover and no keyboard, so it
 // needs the same swipe / long-press affordances as a phone.
@@ -43,6 +50,7 @@ export default function Row({
   const nameRef = useRef(null);
   const cancelledRef = useRef(false);
   const [draft, setDraft] = useState(item.title);
+  const [tagsOpen, setTagsOpen] = useState(false);
   const t = useRef({
     x0: 0, y0: 0, dx: 0, dy: 0, t0: 0,
     swiping: false, longPressTimer: null, pressVisualTimer: null, suppressClick: false,
@@ -242,6 +250,10 @@ export default function Row({
   const stateWord = item.state === "later" ? "saved for later" : item.state === "archived" ? "archived" : "";
   const rowLabel = [item.title, domain(item.url), stateWord].filter(Boolean).join(", ");
 
+  const tags = item.tags || [];
+  const overflowTags = tagsOpen ? [] : tags.slice(COMPACT_TAGS);
+  const shownTags = overflowTags.length ? tags.slice(0, COMPACT_TAGS) : tags;
+
   return (
     <div className="item-row" role="listitem">
       <div className="swipe-bg" ref={bgRef} aria-hidden="true">
@@ -311,13 +323,16 @@ export default function Row({
         </div>
 
         {item.tags && item.tags.length > 0 && (
-          <div className="row-tags">
-            {item.tags.map((t) => (
+          <div className={"row-tags" + (tagsOpen ? " open" : "")}>
+            {shownTags.map((t) => (
               <button
                 key={t}
                 type="button"
                 className={"chip" + (t === tagFilter ? " active" : "")}
                 tabIndex={rove}
+                /* with a pointer, a tag long enough to ellipse can still be
+                   read in full; on touch that's the tag editor's job */
+                title={t}
                 /* it toggles a filter rather than navigating, so pressed
                    state is the honest thing to announce */
                 aria-pressed={t === tagFilter}
@@ -327,6 +342,21 @@ export default function Row({
                 {t}
               </button>
             ))}
+            {overflowTags.length > 0 && (
+              <button
+                type="button"
+                className="chip chip-more"
+                tabIndex={rove}
+                /* The tooltip is the quick answer on a pointer device; the
+                   click is the one that works everywhere. Both say the same
+                   thing, so neither is the only way through. */
+                title={overflowTags.map((t) => `#${t}`).join("  ")}
+                aria-label={`Show ${overflowTags.length} more tag${overflowTags.length > 1 ? "s" : ""} on ${item.title}: ${overflowTags.join(", ")}`}
+                onClick={(e) => { e.stopPropagation(); setTagsOpen(true); }}
+              >
+                +{overflowTags.length}
+              </button>
+            )}
           </div>
         )}
 

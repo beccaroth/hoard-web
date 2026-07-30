@@ -17,6 +17,13 @@
   --accent-line: #c3a15a;
   --accent-bg: rgba(155,117,32,.11);
   --accent-bg-strong: rgba(155,117,32,.20);
+  /* A tag chip is a pill drawn on the row it sits in, so it needs its own
+     fill and outline rather than the generic surface/border pair: on the dark
+     palette those two land 1.06:1 and 1.19:1 against the card and the pill
+     stops being a shape at all. Held apart per theme so each can carry the
+     same separation the light one has always had. */
+  --chip-bg:   #f2ecdf;
+  --chip-line: #e0d8c6;
   --mark-a:    #a87c22;
   --mark-b:    #6d4f10;
   --tabs-bg:   rgba(251,248,242,.88);
@@ -53,6 +60,8 @@
     --accent-line: #5a4620;
     --accent-bg: rgba(217,164,65,.10);
     --accent-bg-strong: rgba(217,164,65,.20);
+    --chip-bg:   #29241a;
+    --chip-line: #3f3728;
     --mark-a:    #f2c976;
     --mark-b:    #a87a2c;
     --tabs-bg:   rgba(23,20,15,.88);
@@ -83,6 +92,8 @@
   --accent-line: #5a4620;
   --accent-bg: rgba(217,164,65,.10);
   --accent-bg-strong: rgba(217,164,65,.20);
+  --chip-bg:   #29241a;
+  --chip-line: #3f3728;
   --mark-a:    #f2c976;
   --mark-b:    #a87a2c;
   --tabs-bg:   rgba(23,20,15,.88);
@@ -1084,30 +1095,63 @@ button:disabled:hover { background: var(--accent); box-shadow: var(--shadow-sm);
 header, .right { animation: fade .45s ease both; }
 .right { animation-delay: .1s; }
 
-/* ---------- tag chips on rows ---------- */
+/* ---------- tag chips on rows ----------
+   One line, always: rows in a ledger are worth more level with each other than
+   any individual row is worth complete, and the count is capped (COMPACT_TAGS
+   in Row) so a line is all it takes.
+
+   The strip is bounded because it doesn't shrink, and everything it takes comes
+   out of the title and the row's own controls. Unbounded, three long tags could
+   drive the title to nothing and push the buttons under .right's overflow —
+   silently, since that overflow is hidden. Within the bound it still won't
+   clip: a chip sliced down the middle read as a rendering fault and the tag it
+   named was unguessable, so the chips ellipse to share the line instead.
+   Expanding a row is the one case that may wrap, and that's a row you asked to
+   see in full. */
 .row-tags {
   display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
   gap: 5px;
   flex-shrink: 0;
   margin-right: 10px;
   max-width: 280px;
-  overflow: hidden;
 }
+.row-tags.open { flex-wrap: wrap; }
 .chip {
   font-family: var(--mono);
   font-size: 9px;
   font-weight: 400;
   color: var(--muted);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-line);
   border-radius: 20px;
   padding: 3px 9px;
   cursor: pointer;
   white-space: nowrap;
+  /* Chips are what give when the strip runs out of room: min-width lets them
+     shrink past their text so the line holds, and the ellipsis says they did. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: color .12s ease, background .12s ease, border-color .12s ease;
 }
+/* One preposterous tag shouldn't get to spend the whole strip on itself — past
+   this it ellipses. With a pointer, the chip's own tooltip has the full text;
+   on touch there's no hover and no details sidebar, so the way to read a tag
+   whole is the tag editor, a long-press away. Only in the list, where the space
+   is contested: the details panel wraps and can afford the whole tag. */
+.row-tags .chip { max-width: 170px; }
 .chip::before { content: "#"; opacity: .45; margin-right: 1px; }
 .chip:hover, .chip.active { color: var(--accent); background: var(--accent-bg); border-color: var(--accent-line); }
+/* The overflow counter is a count, not a tag — the missing hash is what sets
+   it apart. It used to be dimmed to --faint as well, which read as decoration
+   at 2.7:1 light and 3.1:1 dark; it's the control that reveals the tags you
+   can't see, so it holds the same weight as the chips it stands in for. */
+.chip-more::before { content: none; }
+/* Never the one that gives: it's two characters wide and it's the only thing
+   saying there's more to see, so the tag chips share out the line around it. */
+.chip-more { letter-spacing: .03em; flex-shrink: 0; }
 
 /* The two controls on the right share .tab for its type, but they're buttons,
    not views — they keep a bordered pill shape instead of the underline. */
@@ -1869,8 +1913,28 @@ header, .right { animation: fade .45s ease both; }
 }
 
 /* ---------- responsive: phone (≤640px) ----------
-   Only this narrow does a row run out of room for its tags; a tablet in
-   portrait keeps them. */
+   Only this narrow does a row run out of room for its tags beside the title; a
+   tablet in portrait keeps them inline. Rather than drop them — they're how you
+   filter, and an item's tags are half of why it's worth keeping — the row wraps
+   and gives them a line of their own under the title. Ordering is what keeps
+   the state badge and the overflow button up on the first line, since the tags
+   sit between them in the markup. */
 @media (max-width: 640px) {
-  .row-tags { display: none; }
+  .item { flex-wrap: wrap; row-gap: 7px; }
+  .row-tags {
+    order: 1;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 6px;
+    /* Indented to the title's column — the favicon well plus the row's gap.
+       Padding rather than a margin: the line is already a full-width flex
+       item, and a margin would push it that much past the row's edge. */
+    margin: 0;
+    padding-left: 38px;
+    /* the line is the row's full width here, which is the tighter bound */
+    max-width: none;
+  }
+  /* Aimed at with a thumb rather than a cursor, so the chips carry more of
+     their own hit area than the dense desktop version needs. */
+  .chip { font-size: 10px; padding: 4.5px 10px; }
 }
