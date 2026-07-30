@@ -1603,6 +1603,296 @@ header, .right { animation: fade .45s ease both; }
 .stash-fab:active { transform: translateY(1px); }
 .stash-fab.hidden { display: none; }
 
+/* ---------- triage ----------
+   A full-screen sitting with the inbox: one card, three ways out. Deliberately
+   below the toaster (10000) and the tag bar (10001) — an undo you can't see is
+   no undo, and tagging from in here docks the same editor the catalog uses. */
+.triage {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+  animation: fade .16s ease both;
+}
+/* It takes focus on open so the keys land here rather than on the catalog
+   behind it — but it's a container, not a control, so it shouldn't wear a ring. */
+.triage:focus { outline: none; }
+
+.triage-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 2px 10px;
+}
+.triage-eyebrow {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.triage-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .04em;
+  color: var(--muted);
+  margin-left: auto;
+}
+.triage-close {
+  display: grid;
+  place-items: center;
+  width: 30px; height: 30px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 0;
+  transition: color .12s ease, border-color .12s ease, background .12s ease;
+}
+.triage-close:hover { color: var(--accent-2); border-color: var(--accent); background: var(--accent-bg); }
+
+.triage-progress {
+  height: 2px;
+  border-radius: 2px;
+  background: var(--border-2);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.triage-progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width .22s cubic-bezier(.2,.8,.2,1);
+}
+
+/* The card takes whatever's left; the decisions keep their place at the bottom
+   so the same button is under your thumb on every item. */
+.triage-card {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 20px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.triage-site { display: flex; align-items: flex-start; gap: 13px; }
+.triage-fav { width: 44px; height: 44px; border-radius: 11px; border-color: var(--accent-line); }
+.triage-fav .fav-letter { font-size: 19px; color: var(--accent); }
+.triage-fav .fav { width: 26px; height: 26px; }
+.triage-site-meta { min-width: 0; flex: 1; }
+.triage-title {
+  margin: 0;
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 60, "WONK" 1;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.24;
+  letter-spacing: -.01em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.triage-title-input {
+  width: 100%;
+  margin: 0;
+  padding: 3px 7px;
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 60, "WONK" 1;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.24;
+  letter-spacing: -.01em;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--accent-line);
+  border-radius: 8px;
+  outline: none;
+}
+.triage-domain {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+
+/* The sketch left the middle of the card empty. What belongs there is the one
+   thing that answers "do I still want this?" — the link, at a size you can hit
+   without aiming. */
+.triage-open {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 13px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: .03em;
+  overflow-wrap: anywhere;
+  transition: color .12s ease, border-color .12s ease, background .12s ease;
+}
+.triage-open:hover { color: var(--accent); border-color: var(--accent-line); background: var(--accent-bg); }
+.triage-open svg { flex-shrink: 0; margin-top: 2px; }
+.triage-open-url { min-width: 0; }
+
+.triage-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.triage-added {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .04em;
+  color: var(--faint);
+}
+.triage-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* Pinned to the card's floor, so tagging and renaming stay put as the pile
+   changes height under them. */
+.triage-edits { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; padding-top: 4px; }
+.triage-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  transition: color .12s ease, border-color .12s ease, background .12s ease;
+}
+.triage-edit svg { color: var(--faint); transition: color .12s ease; }
+.triage-edit:hover { color: var(--accent); border-color: var(--accent-line); background: var(--accent-bg); }
+.triage-edit:hover svg { color: var(--accent); }
+
+.triage-decide { display: flex; flex-direction: column; gap: 9px; padding-top: 14px; flex-shrink: 0; }
+.triage-decide-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.triage-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 16px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--sans);
+  font-weight: 650;
+  font-size: 14px;
+  transition: color .12s ease, border-color .12s ease, background .12s ease;
+}
+.triage-btn svg { color: var(--faint); flex-shrink: 0; transition: color .12s ease; }
+.triage-btn:active { transform: translateY(1px); }
+/* Translucent literals rather than the theme's own --green/--amber, matching
+   how .details-danger tints: low enough alpha to read on either surface, while
+   the text and border keep using the variable that flips with the theme. */
+.triage-archive:hover { color: var(--green); border-color: var(--green); background: rgba(76,107,57,.10); }
+.triage-archive:hover svg { color: var(--green); }
+.triage-later:hover { color: var(--amber); border-color: var(--amber); background: rgba(154,90,34,.11); }
+.triage-later:hover svg { color: var(--amber); }
+/* Quieter than the two real decisions — skipping isn't one. */
+.triage-skip {
+  background: transparent;
+  border-style: dashed;
+  color: var(--muted);
+  font-weight: 600;
+}
+.triage-skip:hover { color: var(--ink); border-color: var(--muted); background: var(--surface-2); }
+.triage-skip:hover svg { color: var(--muted); }
+
+.triage-done {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  text-align: center;
+  padding: 20px;
+}
+.triage-done-line {
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 60, "WONK" 1;
+  font-style: italic;
+  font-size: 22px;
+  color: var(--muted);
+}
+.triage-done-how {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .04em;
+  color: var(--faint);
+}
+.triage-leave {
+  margin-top: 14px;
+  padding: 12px 30px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  transition: color .12s ease, border-color .12s ease, background .12s ease;
+}
+.triage-leave:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
+
+/* The header's way in, with the size of the pile on it. */
+.triage-trigger { gap: 7px; }
+.triage-n {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .02em;
+}
+
+/* On a wide screen a full-bleed card is a lot of nothing either side — hold it
+   to a column and let it sit high, the way the sketch reads on a phone. */
+@media (min-width: 901px) {
+  .triage { padding: 22px; align-items: center; }
+  .triage-top, .triage-progress, .triage-card, .triage-decide, .triage-done {
+    width: 100%;
+    max-width: 560px;
+  }
+  /* The card sizes to its contents here rather than filling the screen, so the
+     two auto margins float it and its decisions as one block in the middle
+     instead of stranding them at the top of a tall empty page. */
+  .triage-card { flex: 0 1 auto; max-height: 60vh; margin-top: auto; }
+  .triage-decide { margin-bottom: auto; padding-bottom: 4px; }
+}
+
 /* ---------- details sheet (mobile long-press / ⋯) ----------
    The phone's answer to the sidebar: the same facts, then the actions the
    keyboard shortcuts reach on a desktop. Sized against the viewport because
@@ -1782,6 +2072,17 @@ header, .right { animation: fade .45s ease both; }
   border-radius: 8px;
 }
 .help-row + .help-row { border-top: 1px solid var(--border-2); }
+.help-group {
+  padding: 14px 12px 6px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+/* The group heading is a divider in its own right — a rule above the first row
+   under it would read as a second one. */
+.help-group + .help-row { border-top: none; }
 .help-keys { display: inline-flex; gap: 4px; }
 .help-lab { font-size: 13px; color: var(--muted); font-weight: 500; }
 
@@ -1845,8 +2146,10 @@ header, .right { animation: fade .45s ease both; }
      this wins. */
   .legend-trigger.icon-btn { display: none; }
   /* Export collapses to its icon — the download glyph reads clearly enough,
-     and the word is the widest thing left in the header. */
+     and the word is the widest thing left in the header. Triage keeps its
+     count, which is the part that isn't guessable from the glyph. */
   .export-label { display: none; }
+  .triage-label { display: none; }
 
   main {
     grid-template-columns: 1fr;

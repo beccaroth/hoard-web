@@ -58,6 +58,11 @@ export default function TagEditor({ item, allTags, onAdd, onRemove, onClose }) {
       if (val.trim()) commit(val);
     } else if (e.key === "Escape") {
       e.preventDefault();
+      // This Escape was for the tag bar, and it ends here. Left to bubble it
+      // reaches the window handler with the input already gone, so nothing
+      // recognises it as spent: it used to fall through and clear an active tag
+      // filter, and with triage open it would shut the whole sitting down.
+      e.stopPropagation();
       onClose();
     }
   }
