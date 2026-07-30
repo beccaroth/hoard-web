@@ -27,10 +27,10 @@ const LONG_PRESS_MS = 500;
 const PRESS_VISUAL_MS = 200;
 
 // About what the row's tag column has ever had room for — three chips is what
-// fits its 280px on a desktop row, and what fits a phone's tag line before it
-// becomes a tag cloud. Past that they collapse behind a +N that names them in
-// its tooltip and expands the rest in place: hidden is fine, unreachable isn't,
-// since the chips are also how you filter.
+// the strip's 280px holds on a desktop row, and what a phone's tag line holds
+// before it becomes a tag cloud. Past that they collapse behind a +N that names
+// them in its tooltip and expands the rest in place: hidden is fine,
+// unreachable isn't, since the chips are also how you filter.
 const COMPACT_TAGS = 3;
 
 // Gestures key off the input device, not the window width: a tablet is wide
@@ -330,7 +330,8 @@ export default function Row({
                 type="button"
                 className={"chip" + (t === tagFilter ? " active" : "")}
                 tabIndex={rove}
-                /* a tag long enough to ellipse can still be read in full */
+                /* with a pointer, a tag long enough to ellipse can still be
+                   read in full; on touch that's the tag editor's job */
                 title={t}
                 /* it toggles a filter rather than navigating, so pressed
                    state is the honest thing to announce */
