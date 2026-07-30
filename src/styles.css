@@ -237,14 +237,29 @@ kbd {
 }
 
 /* ---------- layout ----------
-   One column. The catalog is the app; adding links happens in a modal that
-   isn't on screen the rest of the time. */
+   The catalog is the app; adding links happens in a modal that isn't on screen
+   the rest of the time. Beside it, on desktop only, sits the details sidebar. */
 main {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr;
   padding: 0 18px 18px;
   min-height: 0;
+}
+/* Two columns once there's room for them. The collapsed width is the rail, not
+   zero, so the way back is always on screen. */
+@media (min-width: 901px) {
+  main {
+    gap: 14px;
+    transition: grid-template-columns .2s cubic-bezier(.2,.8,.2,1);
+  }
+  main.details-open { grid-template-columns: minmax(0, 1fr) 320px; }
+  main.details-shut { grid-template-columns: minmax(0, 1fr) 38px; }
+}
+/* Between 900 and 1200 the catalog is the thing under pressure, so the sidebar
+   gives up the width rather than squeezing the rows. */
+@media (min-width: 901px) and (max-width: 1200px) {
+  main.details-open { grid-template-columns: minmax(0, 1fr) 268px; }
 }
 
 /* ---------- stash modal ---------- */
@@ -1120,6 +1135,229 @@ header, .right { animation: fade .45s ease both; }
 .search-toggle, .search-close { display: none; }
 .search-toggle svg, .search-close svg { color: var(--faint); }
 
+/* ---------- details sidebar ----------
+   A second card beside the catalog, holding everything a row can't show: the
+   whole URL, both timestamps, the full tag set and the actions the keyboard
+   shortcuts reach. Collapsing leaves a rail behind rather than nothing, so
+   there's still something to click. Desktop only — see the ≤900px block. */
+.details {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  animation: fade .45s ease both;
+  animation-delay: .16s;
+}
+.details::-webkit-scrollbar { width: 12px; }
+.details::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border: 4px solid var(--surface); border-radius: 10px; }
+.details::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+.details.collapsed { overflow: hidden; }
+
+/* Matched to the catalog's tab strip: same blur, same rule underneath, so the
+   two columns start on the same line. */
+.details-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 13px 14px 12px;
+  background: var(--tabs-bg);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-2);
+}
+.details-eyebrow {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.details-toggle {
+  display: grid;
+  place-items: center;
+  width: 26px; height: 26px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 0;
+  transition: color .12s ease, background .12s ease, border-color .12s ease;
+}
+.details-toggle:hover { color: var(--accent-2); border-color: var(--accent); background: var(--accent-bg); }
+
+/* Collapsed: the whole column is the button, with the label set on its side. */
+.details-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  padding: 13px 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .12s ease, background .12s ease;
+}
+.details-rail:hover { color: var(--accent); background: var(--surface-2); }
+.details-rail-label {
+  writing-mode: vertical-rl;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.details-body { padding: 15px 14px 18px; display: flex; flex-direction: column; gap: 15px; }
+
+.details-site { display: flex; align-items: flex-start; gap: 11px; }
+.details-fav { width: 34px; height: 34px; border-radius: 9px; border-color: var(--accent-line); }
+.details-fav .fav-letter { font-size: 15px; color: var(--accent); }
+.details-fav .fav { width: 20px; height: 20px; }
+.details-site-meta { min-width: 0; flex: 1; }
+/* The one place a title gets to run to three lines instead of an ellipsis. */
+.details-title {
+  margin: 0;
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 60, "WONK" 1;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -.005em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.details-domain {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+
+.details-url {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  line-height: 1.6;
+  letter-spacing: .03em;
+  color: var(--muted);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition: color .12s ease, border-color .12s ease, background .12s ease;
+}
+.details-url:hover { color: var(--accent); border-color: var(--accent-line); background: var(--accent-bg); }
+.details-url svg { flex-shrink: 0; margin-top: 2px; }
+
+/* Label / value pairs. The label column is fixed so the values line up. */
+.details-facts { margin: 0; display: flex; flex-direction: column; gap: 9px; }
+.details-fact { display: grid; grid-template-columns: 62px 1fr; gap: 10px; align-items: baseline; }
+.details-fact dt {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.details-fact dd {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.details-ago {
+  display: block;
+  margin-top: 1px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .04em;
+  color: var(--faint);
+}
+.details-state { font-weight: 600; }
+.details-state.later { color: var(--amber); }
+.details-state.archived { color: var(--green); }
+
+.details-block { display: flex; flex-direction: column; gap: 8px; }
+.details-block-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.details-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color .12s ease;
+}
+.details-link-btn:hover { color: var(--accent); }
+.details-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.details-none { font-family: var(--mono); font-size: 9px; letter-spacing: .04em; color: var(--faint); }
+
+/* Two columns for the per-item actions; the move controls get their own row so
+   a state change never sits next to a rename. */
+.details-actions, .details-moves { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.details-action {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color .12s ease, background .12s ease, border-color .12s ease;
+}
+.details-action svg { flex-shrink: 0; color: var(--faint); }
+.details-action:hover { color: var(--accent); border-color: var(--accent-line); background: var(--accent-bg); }
+.details-action:hover svg { color: var(--accent); }
+.details-action:disabled { opacity: .5; cursor: default; }
+.details-action:disabled:hover { color: var(--muted); border-color: var(--border); background: var(--surface); }
+.details-action:disabled:hover svg { color: var(--faint); }
+.details-danger:hover { color: #c54a3a; border-color: #c54a3a; background: rgba(197,74,58,.10); }
+.details-danger:hover svg { color: #c54a3a; }
+
+.details-empty { padding: 22px 16px; display: flex; flex-direction: column; gap: 6px; }
+.details-empty-line {
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 60, "WONK" 1;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--muted);
+}
+.details-empty-how { font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; color: var(--faint); }
+.details-empty-how kbd { margin: 0 1px; }
+
 /* ---------- tag editor bar ---------- */
 .tagbar {
   position: fixed;
@@ -1549,6 +1787,10 @@ header, .right { animation: fade .45s ease both; }
     padding: 0 10px 10px;
     gap: 0;
   }
+
+  /* No room for a second column, and the row's actions sheet already covers
+     what the sidebar would say. */
+  .details { display: none; }
 
 
   /* iOS Safari auto-zooms when a focused field's font-size is < 16px.
