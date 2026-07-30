@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ExternalLink, Copy, Pencil, RotateCw, Tag, Trash2,
   Inbox, Clock, Archive, PanelRightClose, PanelRightOpen,
@@ -17,6 +18,9 @@ export default function DetailsPanel({
   item, open, tagFilter,
   onToggle, onOpen, onCopy, onRename, onRefresh, onTag, onFilterTag, onMove, onDelete,
 }) {
+  // The favicon URL that 404'd, if any — see the img below.
+  const [failedFav, setFailedFav] = useState(null);
+
   // Collapsed, the panel keeps a rail on the edge rather than vanishing —
   // otherwise there's nothing left to say it exists.
   if (!open) {
@@ -63,12 +67,19 @@ export default function DetailsPanel({
           <div className="details-site">
             <div className="fav-well details-fav">
               <span className="fav-letter">{(domain(item.url)[0] || "?").toUpperCase()}</span>
-              {item.favicon && (
+              {item.favicon && failedFav !== item.favicon && (
                 <img
                   className="fav"
                   src={item.favicon}
                   alt=""
-                  onError={(e) => { e.currentTarget.remove(); }}
+                  /* A row can rip its own broken favicon out of the DOM because
+                     the whole row unmounts as one node. This well outlives the
+                     selection, so React reconciles the img itself — pulling it
+                     out from under React throws on the next selection change
+                     and takes the app down. Remember the dead URL instead; the
+                     letter-mark underneath shows through, and a different item
+                     (or a refreshed favicon) gets a fair try. */
+                  onError={() => setFailedFav(item.favicon)}
                 />
               )}
             </div>
