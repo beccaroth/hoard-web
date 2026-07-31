@@ -184,7 +184,7 @@ header {
   color: transparent;
 }
 .header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.header-right .btn-ghost { padding: 7px 14px; font-size: 12.5px; }
+.header-right .btn-ghost { padding: 7px 14px; font-size: 11px; }
 /* Never wrapped: the full strip is ~965px, so it's shown only at widths that
    fit it on one line (see the responsive block) and collapses to the keyboard
    button below that. */
