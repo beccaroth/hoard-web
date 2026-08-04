@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { supabase } from "./supabase.js";
 import { useHoard } from "../store.js";
-import { mergeHoards, readBlob, itemVersion } from "./merge.js";
+import { mergeHoards, readBlob, itemVersion, itemSignature } from "./merge.js";
 
 let pushTimer = null;
 let pollTimer = null;
@@ -141,17 +141,25 @@ async function writeRemote(userId, blob) {
 }
 
 // Does the remote blob lack anything our merged blob has — a new item, a newer
-// version of an item, or a delete it hasn't seen? If not, there's nothing to
-// push and we can skip the write (important: the poll calls this constantly).
+// version of an item, a same-version item whose contents differ, or a delete it
+// hasn't seen? If not, there's nothing to push and we can skip the write
+// (important: the poll calls this constantly).
 function remoteNeedsWrite(remote, merged) {
   if (
     merged.items.length !== remote.items.length ||
     merged.tombstones.length !== remote.tombstones.length
   ) return true;
-  const rItems = new Map(remote.items.map((i) => [i.id, itemVersion(i)]));
+  const rItems = new Map(remote.items.map((i) => [i.id, i]));
   for (const i of merged.items) {
-    const rv = rItems.get(i.id);
-    if (rv === undefined || itemVersion(i) > rv) return true;
+    const r = rItems.get(i.id);
+    if (r === undefined) return true;
+    const iv = itemVersion(i);
+    const rv = itemVersion(r);
+    if (iv > rv) return true;
+    // Same version but different content: an edit that didn't bump `updatedAt`
+    // would otherwise never leave this device. Version alone is the fast path;
+    // this is the correctness backstop, and `beats` keeps it from ping-ponging.
+    if (iv === rv && itemSignature(i) !== itemSignature(r)) return true;
   }
   const rTomb = new Map(remote.tombstones.map((t) => [t.id, t.deletedAt]));
   for (const t of merged.tombstones) {
@@ -202,7 +210,14 @@ function maybePull({ ignoreHidden = false } = {}) {
 // ---- realtime ----
 
 function onRealtime(payload) {
-  const remote = readBlob(payload.new?.data);
+  // "The row changed" is not the same as "here is the row". DELETE events carry
+  // no `new`, and Realtime replaces a record that exceeds its size limit with
+  // just the primary key plus an error — and the blob grows into that limit as
+  // the hoard does. Reading either as an empty hoard makes remoteNeedsWrite true
+  // and pushes our blob over whatever is actually there, wiping the very write
+  // we were being told about. Go re-read the row instead.
+  if (!payload.new?.data) { maybePull({ ignoreHidden: true }); return; }
+  const remote = readBlob(payload.new.data);
   const local = getLocalBlob();
   const merged = mergeHoards(local, remote);
   if (merged.changed) {
@@ -284,17 +299,29 @@ async function handleSession(session, onAuthChange) {
   }
 }
 
+// Bumped by each initSync so a torn-down init can tell that it's been replaced.
+let initGeneration = 0;
+
 // Wires auth + realtime + debounced push + catch-up pulls. Returns a cleanup function.
 export function initSync(onAuthChange) {
   if (!supabase) { onAuthChange?.(null); flushReady(); return () => {}; }
 
+  // The sync state above is module-level and outlives any one mount, so tearing
+  // down has to actually reset it and in-flight work from a dead init has to
+  // stay out of the way. Otherwise a remount — StrictMode's double-mount, an HMR
+  // reload, App remounting — finds `currentUserId` still set, short-circuits in
+  // handleSession, never reaches setupChannel, and quietly runs on the poll
+  // alone for the rest of the session.
+  const gen = ++initGeneration;
+  const alive = () => gen === initGeneration;
+
   supabase.auth
     .getSession()
-    .then(({ data }) => handleSession(data.session, onAuthChange))
-    .finally(flushReady);
-  const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
-    handleSession(session, onAuthChange)
-  );
+    .then(({ data }) => (alive() ? handleSession(data.session, onAuthChange) : null))
+    .finally(() => { if (alive()) flushReady(); });
+  const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+    if (alive()) handleSession(session, onAuthChange);
+  });
 
   // push local changes upward (debounced) while signed in — both item edits and deletes
   const onLocalChange = () => {
@@ -324,5 +351,9 @@ export function initSync(onAuthChange) {
     document.removeEventListener("visibilitychange", onVisible);
     window.removeEventListener("focus", onVisible);
     window.removeEventListener("online", onOnline);
+    // Hand the next initSync a clean slate — see the `alive` note above.
+    currentUserId = null;
+    pendingSignIn = null;
+    lastPullAt = 0;
   };
 }

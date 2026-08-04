@@ -15,6 +15,32 @@ export function itemVersion(i) {
   return i.updatedAt ?? i.added ?? 0;
 }
 
+// Canonical, key-order-independent serialization of an item. Remote blobs come
+// back from Postgres with their keys in whatever order the JSONB round-trip
+// produced, `loading` is transient UI state, and undefined-valued keys vanish on
+// the way up — none of those may count as a difference, or every comparison
+// against remote would report one.
+export function itemSignature(i) {
+  return JSON.stringify(
+    Object.keys(i)
+      .sort()
+      .filter((k) => k !== "loading" && i[k] !== undefined)
+      .map((k) => [k, i[k]])
+  );
+}
+
+// Which of two copies of the same item survives? Newest `updatedAt` wins. Ties
+// are broken on content rather than on argument order: "whichever side we
+// happened to read first" makes each device keep its own copy forever, and —
+// since remoteNeedsWrite compares content too — push it back at the other one on
+// every poll. Comparing signatures makes both devices pick the same winner.
+function beats(a, b) {
+  const av = itemVersion(a);
+  const bv = itemVersion(b);
+  if (av !== bv) return av > bv;
+  return itemSignature(a) < itemSignature(b);
+}
+
 function normalizeItems(arr) {
   return (Array.isArray(arr) ? arr : []).map((i) => ({
     ...i,
@@ -58,11 +84,11 @@ export function mergeHoards(localBlob, remoteBlob, now = Date.now()) {
     if (!prev || t.deletedAt > prev.deletedAt) tombById.set(t.id, t);
   }
 
-  // Items: union by id, keep the newest version.
+  // Items: union by id, keep the newest version (see `beats` for ties).
   const itemById = new Map();
   for (const i of [...local.items, ...remote.items]) {
     const prev = itemById.get(i.id);
-    if (!prev || itemVersion(i) > itemVersion(prev)) itemById.set(i.id, i);
+    if (!prev || beats(i, prev)) itemById.set(i.id, i);
   }
 
   // Apply tombstones. A delete wins unless the surviving item is strictly newer

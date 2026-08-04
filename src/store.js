@@ -285,8 +285,11 @@ export const useHoard = create(
         const item = get().items.find((i) => i.id === id);
         if (!item || item.loading) return;
         if (item.titleEdited) undoStack.push({ type: "rename", id, prevTitle: item.title, prevEdited: true });
+        // `updatedAt` is what carries a change across devices, so clearing the
+        // flag has to bump it even though the title itself hasn't moved yet —
+        // and especially if the enrich below fails and never bumps it for us.
         set((s) => ({
-          items: s.items.map((i) => (i.id === id ? { ...i, titleEdited: false } : i)),
+          items: s.items.map((i) => (i.id === id ? { ...i, titleEdited: false, updatedAt: Date.now() } : i)),
           selId: id,
         }));
         toast("Refreshing", { description: item.url });
