@@ -305,7 +305,7 @@ export default function App() {
             {countFor("inbox") > 0 && <span className="triage-n">{countFor("inbox")}</span>}
           </button>
           <button
-            className="btn-ghost icon-btn"
+            className="btn-ghost icon-btn legend-trigger"
             aria-label="Keyboard shortcuts"
             title="Keyboard shortcuts"
             onClick={() => setHelpOpen(true)}

@@ -185,20 +185,10 @@ header {
 }
 .header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .header-right .btn-ghost { padding: 7px 14px; font-size: 11px; }
-/* Never wrapped: the full strip is ~965px, so it's shown only at widths that
-   fit it on one line (see the responsive block) and collapses to the keyboard
-   button below that. */
-.legend { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
-.legend .pair {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 11px 5px 7px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  box-shadow: var(--shadow-sm);
-}
-.legend .lab { font-size: 11px; color: var(--muted); font-weight: 500; }
-.legend-trigger.icon-btn { display: none; padding: 7px 9px; }
+/* The shortcut list used to sit in the header as a strip of key chips; it's the
+   dialog behind this button now, at every width that has a keyboard (the ≤900
+   block drops it). */
+.legend-trigger.icon-btn { display: inline-flex; padding: 7px 9px; }
 kbd {
   font-family: var(--mono);
   font-size: 10.5px;
@@ -2177,15 +2167,6 @@ header, .right { animation: fade .45s ease both; }
 .help-keys { display: inline-flex; gap: 4px; }
 .help-lab { font-size: 13px; color: var(--muted); font-weight: 500; }
 
-/* ---------- responsive: shortcut legend ----------
-   The legend plus the brand and the right-hand controls need ~1400px. Below
-   that it would wrap into a second header row, so it folds into the keyboard
-   button, which opens the same list as a modal. */
-@media (max-width: 1400px) {
-  .legend { display: none; }
-  .legend-trigger.icon-btn { display: inline-flex; }
-}
-
 /* ---------- responsive: touch devices ----------
    Keyed off the pointer rather than the width so tablets — wide enough to keep
    the two-pane layout — still get the phone's gestures. Without hover there's
@@ -2233,8 +2214,8 @@ header, .right { animation: fade .45s ease both; }
      it. */
   .stash-btn { display: none; }
   /* No hardware keyboard here, so the shortcuts button (and its dialog) has
-     nothing to offer — hide it. Matches the ≤1400 selector's specificity so
-     this wins. */
+     nothing to offer — hide it. Matches the base selector's specificity, and
+     comes later in the file, so this wins. */
   .legend-trigger.icon-btn { display: none; }
   /* Export collapses to its icon — the download glyph reads clearly enough,
      and the word is the widest thing left in the header. Triage keeps its
