@@ -304,16 +304,8 @@ export default function App() {
             <span className="triage-label">Triage</span>
             {countFor("inbox") > 0 && <span className="triage-n">{countFor("inbox")}</span>}
           </button>
-          <div className="legend">
-            {KEYS.map((p) => (
-              <span className="pair" key={p.lab}>
-                {p.k.map((k) => <kbd key={k}>{k}</kbd>)}
-                <span className="lab">{p.lab}</span>
-              </span>
-            ))}
-          </div>
           <button
-            className="btn-ghost icon-btn legend-trigger"
+            className="btn-ghost icon-btn"
             aria-label="Keyboard shortcuts"
             title="Keyboard shortcuts"
             onClick={() => setHelpOpen(true)}
