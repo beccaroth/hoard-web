@@ -1510,12 +1510,24 @@ header, .right { animation: fade .45s ease both; }
 .sg::before { content: "#"; opacity: .45; margin-right: 1px; }
 .sg:hover, .sg.active { background: var(--accent-bg); color: var(--accent-2); }
 .tagbar .tb-done {
+  display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--sans); font-weight: 650; font-size: 12px;
   color: var(--muted); background: var(--surface-2);
   border: 1px solid var(--border); border-radius: 8px;
   padding: 7px 12px; cursor: pointer;
 }
 .tagbar .tb-done:hover { color: var(--ink); border-color: var(--faint); }
+/* Quieter than the word it sits beside — the button is the instruction, the
+   key is the faster way to press it, same as the stash button's. */
+.tagbar .tb-kbd {
+  font-size: 9px;
+  opacity: .8;
+  color: inherit;
+  background: transparent;
+  border-color: var(--border-2);
+  padding: 1px 4px;
+  min-width: 0;
+}
 
 /* ---------- command palette ---------- */
 .cmdk-backdrop {
@@ -2375,6 +2387,9 @@ header, .right { animation: fade .45s ease both; }
   .tagbar .tb-chips { max-width: none; flex: 1 0 100%; }
   .tagbar .tb-input-wrap { flex: 1; min-width: 0; }
   .tagbar input { width: 100%; min-width: 0; }
+  /* A key hint is a promise the phone can't keep — there's no ⌘ under a thumb,
+     and the width it costs matters more in a bar that wraps. */
+  .tagbar .tb-kbd { display: none; }
 
   /* command palette */
   .cmdk-backdrop { padding: 6vh 12px 0; }
