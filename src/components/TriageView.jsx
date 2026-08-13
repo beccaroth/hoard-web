@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, Archive, Clock, ChevronsRight, Tag, Pencil, ExternalLink, Trash2 } from "lucide-react";
+import {
+  X, Archive, Clock, ChevronsRight, Tag, Pencil, ExternalLink, Trash2,
+  ChevronLeft, ChevronRight, Undo2,
+} from "lucide-react";
 import { domain } from "../lib/urls.js";
 import { ago } from "../lib/time.js";
 import { sortByAdded } from "../store.js";
@@ -8,17 +11,29 @@ import { sortByAdded } from "../store.js";
 // scanning a hoard you already know; this is for the pile you haven't looked at
 // yet, where the only question is which of three places it belongs.
 //
+// The pass is a line you can walk in both directions. Every card that comes up
+// is written down in `visited`, in the order it appeared, and the cursor `pos`
+// says where along that line you're standing — so back is a step, not a guess.
+// Undo can't do this job on its own: it reverses the last thing that touched
+// the store, which may well be a rename you made on this card, or something
+// from before triage opened, and a skip never enters the stack at all. Those
+// are all reasons the previous card wouldn't come back. Walking the line is
+// answerable to nothing but where you've been.
+//
 // Skipping is deliberately session-only — it isn't stored and it doesn't sync.
 // "Saved for Later" is already the durable way to say "not now", so a skip that
 // outlived the sitting would just be a second, vaguer version of it. Here it
 // means "don't ask me again on this pass"; the item stays in the inbox and
 // comes back next time.
-export default function TriageView({ items, sort, onClose, onAct, onTag, onRename, onOpen, onUndo, onNeedMeta }) {
-  const [skipped, setSkipped] = useState(() => new Set());
-  // Counted rather than derived: a deleted item leaves `items` entirely, so
-  // there's nothing left to look at afterwards to tell it apart from one that
-  // was filed. Undo puts the link back in the queue, so it walks back too.
-  const [deleted, setDeleted] = useState(0);
+export default function TriageView({ items, sort, onClose, onAct, onTag, onRename, onOpen, onUndo, onRestore, onNeedMeta }) {
+  // The line, and where you are on it. `pos === visited.length` is the far end:
+  // nothing left in hand, which is the done screen.
+  const [visited, setVisited] = useState([]);
+  const [pos, setPos] = useState(0);
+  // id -> what this sitting did with it: "archived" | "later" | "delete" | "skip".
+  // A card with no entry is one you haven't answered yet. Re-deciding overwrites,
+  // so the counts below can't drift from what the queue actually shows.
+  const [outcomes, setOutcomes] = useState({});
   // null when not renaming — an empty string is a legitimate draft.
   const [draft, setDraft] = useState(null);
   const inputRef = useRef(null);
@@ -38,21 +53,45 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
   // rather than shrinking to "1 of 1" as it empties.
   const [total] = useState(() => items.filter((i) => i.state === "inbox").length);
 
-  const queue = useMemo(
-    () => sortByAdded(items.filter((i) => i.state === "inbox" && !skipped.has(i.id)), sort),
-    [items, skipped, sort],
+  const visitedSet = useMemo(() => new Set(visited), [visited]);
+  // What hasn't come up yet. A card leaves this pool the moment it's shown, so
+  // filing it, skipping it, or walking back to it can't put it in line twice.
+  const pool = useMemo(
+    () => sortByAdded(items.filter((i) => i.state === "inbox" && !visitedSet.has(i.id)), sort),
+    [items, visitedSet, sort],
   );
-  // Always the head of the queue: filing an item or skipping it takes it out,
-  // and the next one moves up on its own. No cursor to keep in step.
-  const item = queue[0];
-  // Three different numbers, and they aren't interchangeable. `done` is how far
-  // through the pile you are — a skip and a delete both advance it, and it's
-  // what the counter and the bar measure. `filed` is how many actually went
-  // somewhere, which is the only one the summary should claim credit for: a
-  // deleted link didn't get filed, it got thrown away, and a skip is still
-  // sitting in the inbox waiting.
-  const done = Math.max(0, total - queue.length);
-  const filed = Math.max(0, done - skipped.size - deleted);
+
+  // Standing at the end of the line: take the next one off the pile.
+  useEffect(() => {
+    if (pos < visited.length) return;
+    const next = pool[0];
+    if (next) setVisited((v) => (v.includes(next.id) ? v : [...v, next.id]));
+  }, [pos, visited.length, pool]);
+
+  const currentId = visited[pos];
+  const live = useMemo(() => items.find((i) => i.id === currentId), [items, currentId]);
+
+  // A deleted link is out of `items` entirely, but it's still a place on the
+  // line and walking back to a blank would be its own bug — so every card that
+  // comes up leaves a copy behind to render from if the original goes.
+  const shotsRef = useRef(new Map());
+  useEffect(() => { if (live) shotsRef.current.set(live.id, live); }, [live]);
+  const item = live || (currentId ? shotsRef.current.get(currentId) : undefined);
+  const gone = Boolean(item) && !live;
+
+  const outcome = currentId ? outcomes[currentId] : undefined;
+  const OUTCOME_LABEL = { archived: "Archived", later: "Saved for later", delete: "Deleted", skip: "Skipped" };
+
+  // Three different numbers, and they aren't interchangeable. `resolved` is how
+  // much of the pile you've answered — a skip and a delete both count, and it's
+  // what the bar measures. `filed` is how many actually went somewhere, which is
+  // the only one the summary should claim credit for: a deleted link didn't get
+  // filed, it got thrown away, and a skip is still sitting in the inbox waiting.
+  const tally = Object.values(outcomes);
+  const resolved = tally.length;
+  const deleted = tally.filter((o) => o === "delete").length;
+  const skipped = tally.filter((o) => o === "skip").length;
+  const filed = resolved - deleted - skipped;
 
   const startRename = () => setDraft(item.title);
 
@@ -67,7 +106,7 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
   }, [draft === null]);
 
   // A rename left open when the card moves on would land on the wrong item.
-  useEffect(() => { setDraft(null); }, [item?.id]);
+  useEffect(() => { setDraft(null); }, [currentId]);
 
   // Anything stashed before descriptions existed has none, and a hoard doesn't
   // re-enrich itself. Fetch for the card actually in front of you: the pile
@@ -82,41 +121,85 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
   // page that was simply unreachable gets another chance next time.
   const triedRef = useRef(new Set());
   useEffect(() => {
-    if (!item || item.loading || item.description !== undefined) return;
-    if (triedRef.current.has(item.id)) return;
-    triedRef.current.add(item.id);
-    onNeedMeta?.(item.id, item.url);
-  }, [item?.id, item?.description, item?.loading]);
+    if (!live || live.loading || live.description !== undefined) return;
+    if (triedRef.current.has(live.id)) return;
+    triedRef.current.add(live.id);
+    onNeedMeta?.(live.id, live.url);
+  }, [live?.id, live?.description, live?.loading]);
+
+  // What this sitting sent to the store, in order. The store's undo stack is
+  // older and wider than this view — it may well be holding something from
+  // before triage opened — so `u` can't assume it reversed one of ours. Popping
+  // our own log tells us what came back and where it lives on the line; an empty
+  // log means the undo reached past this sitting and there's nothing to walk to.
+  // Renames are logged too, because they go on the same stack: without them the
+  // log would answer for a filing while the store reversed a title.
+  const logRef = useRef([]);
 
   function commitRename() {
     if (cancelledRef.current || draft === null || !item) return;
+    // Mirrors the store's own guard, so the log only grows when the stack does.
+    const title = draft.trim();
+    if (title && title !== item.title) logRef.current.push({ kind: "rename", id: item.id });
     onRename(item.id, draft);
     setDraft(null);
   }
 
-  function skip() {
-    if (!item) return;
-    setSkipped((s) => new Set(s).add(item.id));
+  function mark(id, value) {
+    setOutcomes((o) => ({ ...o, [id]: value }));
   }
 
-  // What this sitting did, in order. The store's undo stack is older and wider
-  // than this view — it may well be holding something from before triage
-  // opened — so `u` can't just assume it reversed one of ours. Popping our own
-  // log tells us whether the thing coming back was a delete, and the counts
-  // walk back with it; an empty log means the undo reached past this sitting
-  // and there's nothing of ours to adjust.
-  const logRef = useRef([]);
-
   function decide(action) {
+    if (!item || gone) return;
+    logRef.current.push({ kind: "decide", id: currentId });
+    mark(currentId, action);
+    onAct(currentId, action);
+    setPos((p) => p + 1);
+  }
+
+  function skip() {
     if (!item) return;
-    logRef.current.push(action);
-    if (action === "delete") setDeleted((n) => n + 1);
-    onAct(item.id, action);
+    mark(currentId, "skip");
+    setPos((p) => p + 1);
+  }
+
+  // Back is the whole point: one step along the line, no matter what put you
+  // here. It changes nothing about the link — a card you archived is still
+  // archived when you land on it, wearing a badge that says so, and deciding
+  // again from there just files it somewhere else.
+  const canBack = pos > 0;
+  function back() { setPos((p) => Math.max(0, p - 1)); }
+
+  // Forward is the mirror of it, with one wrinkle: moving on from a card you
+  // haven't answered is exactly what skip already means, so it says so rather
+  // than inventing a second, unnamed way to leave a link undecided. Without
+  // that, walking past one would leave it in the inbox and out of the count,
+  // and the summary would quietly under-report the pile it left behind.
+  function forward() {
+    if (!item) return;
+    if (!outcome) skip();
+    else setPos((p) => p + 1);
+  }
+
+  // A deleted card's way back. Undo would do it too, but only while the delete
+  // is still on top of the stack — this works whenever you walk to it.
+  function restore() {
+    if (!gone || !item) return;
+    onRestore?.(item);
+    setOutcomes((o) => { const next = { ...o }; delete next[item.id]; return next; });
   }
 
   function undoLast() {
-    if (logRef.current.pop() === "delete") setDeleted((n) => Math.max(0, n - 1));
+    const last = logRef.current.pop();
     onUndo();
+    if (!last) return;
+    // A reversed filing leaves the link unanswered again; a reversed rename
+    // never touched where it lives.
+    if (last.kind === "decide") {
+      setOutcomes((o) => { const next = { ...o }; delete next[last.id]; return next; });
+    }
+    const idx = visited.indexOf(last.id);
+    if (idx !== -1) setPos(idx);
   }
 
   useEffect(() => {
@@ -131,6 +214,10 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
       // thing you filed is exactly what you're most likely to want back, and
       // the toast's button is gone within a few seconds.
       if (e.key === "u") { e.preventDefault(); undoLast(); return; }
+      // Both arrows work on the done screen too: walking back into the pass you
+      // just finished is the most likely reason to reach for them there.
+      if (e.key === "ArrowLeft") { e.preventDefault(); back(); return; }
+      if (e.key === "ArrowRight") { e.preventDefault(); forward(); return; }
       if (!item) return;
       switch (e.key) {
         case "a": e.preventDefault(); decide("archived"); break;
@@ -144,7 +231,7 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
         // quietly does something different in here is worse than one key.
         case " ": e.preventDefault(); skip(); break;
         case "t": e.preventDefault(); onTag(item.id); break;
-        case "e": e.preventDefault(); startRename(); break;
+        case "e": e.preventDefault(); if (!gone) startRename(); break;
         case "o": case "Enter": e.preventDefault(); onOpen(item.url); break;
         default: break;
       }
@@ -157,11 +244,31 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
     <div className="triage" ref={rootRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Triage inbox">
       <div className="triage-top">
         <span className="triage-eyebrow">Triage</span>
-        {total > 0 && (
-          <span className="triage-count" aria-live="polite">
-            {item ? `${done + 1} of ${total}` : `${done} of ${total}`}
-          </span>
-        )}
+        <div className="triage-nav">
+          <button
+            className="triage-nav-btn"
+            onClick={back}
+            disabled={!canBack}
+            aria-label="Previous link"
+            title="Previous link (←)"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          {total > 0 && (
+            <span className="triage-count" aria-live="polite">
+              {item ? `${pos + 1} of ${total}` : `${resolved} of ${total}`}
+            </span>
+          )}
+          <button
+            className="triage-nav-btn"
+            onClick={forward}
+            disabled={!item}
+            aria-label="Next link"
+            title="Next link (→)"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
         <button className="triage-close" aria-label="Leave triage" title="Leave triage (esc)" onClick={onClose}>
           <X size={18} />
         </button>
@@ -171,12 +278,12 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
         <div
           className="triage-progress"
           role="progressbar"
-          aria-valuenow={done}
+          aria-valuenow={resolved}
           aria-valuemin={0}
           aria-valuemax={total}
           aria-label="Items triaged"
         >
-          <span className="triage-progress-fill" style={{ width: `${(done / total) * 100}%` }} />
+          <span className="triage-progress-fill" style={{ width: `${Math.min(100, (resolved / total) * 100)}%` }} />
         </div>
       )}
 
@@ -194,19 +301,34 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
                 neither is filed, and rolling them together would overstate it. */}
             {total === 0
               ? <>press <kbd>esc</kbd> to head back</>
-              : skipped.size || deleted
+              : skipped || deleted
                 ? [
                     `${filed} filed`,
                     deleted ? `${deleted} deleted` : null,
-                    skipped.size ? `${skipped.size} skipped, still in your inbox` : null,
+                    skipped ? `${skipped} skipped, still in your inbox` : null,
                   ].filter(Boolean).join(" · ")
                 : <>all {filed} filed</>}
           </span>
+          {canBack && (
+            <button className="triage-back-in" onClick={back}>
+              <ChevronLeft size={15} /> Back to the last one
+            </button>
+          )}
           <button className="triage-leave" onClick={onClose}>Done</button>
         </div>
       ) : (
         <>
-          <div className="triage-card">
+          <div className={"triage-card" + (outcome ? " is-past" : "")}>
+            {/* A card you've already answered shouldn't look like one you
+                haven't — the badge is what tells you you've walked back into
+                the part of the pass that's done. */}
+            {outcome && (
+              <div className={"triage-verdict verdict-" + outcome}>
+                <span className="triage-verdict-dot" aria-hidden="true" />
+                {OUTCOME_LABEL[outcome]}
+              </div>
+            )}
+
             <div className="triage-site">
               <div className="fav-well triage-fav">
                 <span className="fav-letter">{(domain(item.url)[0] || "?").toUpperCase()}</span>
@@ -278,37 +400,48 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
               )}
             </div>
 
-            <div className="triage-edits">
-              <button className="triage-edit" title="Edit tags (t)" onClick={() => onTag(item.id)}>
-                <Tag size={15} /> Tag
-              </button>
-              <button className="triage-edit" title="Rename (e)" onClick={startRename}>
-                <Pencil size={15} /> Edit
-              </button>
-            </div>
+            {/* Nothing to edit on a link that isn't there any more. */}
+            {!gone && (
+              <div className="triage-edits">
+                <button className="triage-edit" title="Edit tags (t)" onClick={() => onTag(item.id)}>
+                  <Tag size={15} /> Tag
+                </button>
+                <button className="triage-edit" title="Rename (e)" onClick={startRename}>
+                  <Pencil size={15} /> Edit
+                </button>
+              </div>
+            )}
           </div>
 
-          <div className="triage-decide">
-            <div className="triage-decide-pair">
-              <button className="triage-btn triage-archive" title="Archive (a)" onClick={() => decide("archived")}>
-                <Archive size={16} /> Archive
-              </button>
-              <button className="triage-btn triage-later" title="Save for later (s)" onClick={() => decide("later")}>
-                <Clock size={16} /> Save for Later
+          {gone ? (
+            <div className="triage-decide">
+              <button className="triage-btn triage-restore" onClick={restore}>
+                <Undo2 size={16} /> Put it back in the inbox
               </button>
             </div>
-            {/* The two ways of not filing it, on their own line beneath the two
-                that do. Skip keeps the width because it's the one you reach for
-                often; delete is deliberately the smaller target of the pair. */}
-            <div className="triage-decide-tail">
-              <button className="triage-btn triage-skip" title="Skip for now (space)" onClick={skip}>
-                <ChevronsRight size={16} /> Skip for Now
-              </button>
-              <button className="triage-btn triage-delete" title="Delete (d)" onClick={() => decide("delete")}>
-                <Trash2 size={16} /> Delete
-              </button>
+          ) : (
+            <div className="triage-decide">
+              <div className="triage-decide-pair">
+                <button className="triage-btn triage-archive" title="Archive (a)" onClick={() => decide("archived")}>
+                  <Archive size={16} /> Archive
+                </button>
+                <button className="triage-btn triage-later" title="Save for later (s)" onClick={() => decide("later")}>
+                  <Clock size={16} /> Save for Later
+                </button>
+              </div>
+              {/* The two ways of not filing it, on their own line beneath the two
+                  that do. Skip keeps the width because it's the one you reach for
+                  often; delete is deliberately the smaller target of the pair. */}
+              <div className="triage-decide-tail">
+                <button className="triage-btn triage-skip" title="Skip for now (space)" onClick={skip}>
+                  <ChevronsRight size={16} /> Skip for Now
+                </button>
+                <button className="triage-btn triage-delete" title="Delete (d)" onClick={() => decide("delete")}>
+                  <Trash2 size={16} /> Delete
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>

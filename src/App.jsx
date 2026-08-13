@@ -33,7 +33,8 @@ const KEYS = [
 const TRIAGE_KEYS = [
   { k: ["a"], lab: "archive" }, { k: ["s"], lab: "later" }, { k: ["space"], lab: "skip" },
   { k: ["d"], lab: "delete" }, { k: ["t"], lab: "tag" }, { k: ["e"], lab: "rename" },
-  { k: ["o"], lab: "open" }, { k: ["u"], lab: "undo" }, { k: ["esc"], lab: "leave" },
+  { k: ["o"], lab: "open" }, { k: ["←", "→"], lab: "back / forward" },
+  { k: ["u"], lab: "undo" }, { k: ["esc"], lab: "leave" },
 ];
 
 // An empty view should name the thing that fills it rather than shrug.
@@ -587,6 +588,9 @@ export default function App() {
           onRename={(id, title) => useHoard.getState().renameItem(id, title)}
           onOpen={(url) => window.open(url, "_blank")}
           onUndo={() => useHoard.getState().undo()}
+          /* Back can walk onto a card that was deleted earlier in the pass,
+             which the undo stack can no longer reach past later decisions. */
+          onRestore={(item) => useHoard.getState().restoreItem(item)}
           /* Backfill for links stashed before descriptions existed. keepTitle,
              because this is a late top-up of a card you're looking at — having
              the title change under you mid-decision would be its own bug. */
