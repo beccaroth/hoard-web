@@ -238,6 +238,10 @@ export const useHoard = create(
         if (!last) { toast("Nothing to undo"); return; }
         const { items, tombstones } = get();
         if (last.type === "delete") {
+          // Triage can put a deleted link back on its own, by walking to the
+          // card rather than by reaching for the stack. If it already did, the
+          // entry is spent — splicing it in again would leave two of the link.
+          if (items.some((i) => i.id === last.item.id)) { set({ selId: last.item.id }); return; }
           const copy = [...items];
           // Restore with a fresh updatedAt so the un-delete out-races its own tombstone on merge.
           copy.splice(Math.min(last.index, copy.length), 0, { ...last.item, updatedAt: Date.now() });
@@ -256,6 +260,24 @@ export const useHoard = create(
         } else {
           set({ items: items.map((i) => (i.id === last.id ? { ...i, state: last.prevState, updatedAt: Date.now() } : i)), selId: last.id });
         }
+      },
+
+      // Un-delete by name rather than by position on the undo stack. Triage's
+      // back button can land on a card that was deleted several decisions ago,
+      // where undo would reverse whatever happened since instead. Same repair
+      // as undo's delete branch — the item goes back with a fresh `updatedAt`
+      // so it out-races its own tombstone on the next merge — but reachable
+      // whenever the link is in front of you.
+      restoreItem: (item) => {
+        if (!item?.id) return;
+        const { items, tombstones } = get();
+        if (items.some((i) => i.id === item.id)) { set({ selId: item.id }); return; }
+        set({
+          items: [{ ...item, state: "inbox", updatedAt: Date.now() }, ...items],
+          tombstones: tombstones.filter((t) => t.id !== item.id),
+          selId: item.id,
+        });
+        toast("Back in your inbox", { description: item.title });
       },
 
       moveSel: (dir) => {
