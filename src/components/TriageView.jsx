@@ -82,16 +82,23 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
   const outcome = currentId ? outcomes[currentId] : undefined;
   const OUTCOME_LABEL = { archived: "Archived", later: "Saved for later", delete: "Deleted", skip: "Skipped" };
 
-  // Three different numbers, and they aren't interchangeable. `resolved` is how
-  // much of the pile you've answered — a skip and a delete both count, and it's
-  // what the bar measures. `filed` is how many actually went somewhere, which is
-  // the only one the summary should claim credit for: a deleted link didn't get
-  // filed, it got thrown away, and a skip is still sitting in the inbox waiting.
+  // How far along the line you're standing, which is what both the counter and
+  // the bar report — they sit a few pixels apart and would look broken saying
+  // different things. The bar used to measure answered links instead: identical
+  // on a straight pass, since every card you leave behind gets an outcome, but
+  // frozen while you walked back and forth, which read as a dead control.
+  // Clamped because `total` was taken when we sat down and a sync can drop new
+  // links into the inbox mid-sitting.
+  const walked = Math.min(pos, total);
+
+  // What the sitting did, which is a different question from how far through it
+  // got, and only the summary asks it. `filed` is the one it can claim credit
+  // for: a deleted link didn't get filed, it got thrown away, and a skip is
+  // still sitting in the inbox waiting.
   const tally = Object.values(outcomes);
-  const resolved = tally.length;
   const deleted = tally.filter((o) => o === "delete").length;
   const skipped = tally.filter((o) => o === "skip").length;
-  const filed = resolved - deleted - skipped;
+  const filed = tally.length - deleted - skipped;
 
   const startRename = () => setDraft(item.title);
 
@@ -256,7 +263,7 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
           </button>
           {total > 0 && (
             <span className="triage-count" aria-live="polite">
-              {item ? `${pos + 1} of ${total}` : `${resolved} of ${total}`}
+              {item ? `${Math.min(pos + 1, total)} of ${total}` : `${walked} of ${total}`}
             </span>
           )}
           <button
@@ -278,12 +285,12 @@ export default function TriageView({ items, sort, onClose, onAct, onTag, onRenam
         <div
           className="triage-progress"
           role="progressbar"
-          aria-valuenow={resolved}
+          aria-valuenow={walked}
           aria-valuemin={0}
           aria-valuemax={total}
-          aria-label="Items triaged"
+          aria-label="Progress through the inbox"
         >
-          <span className="triage-progress-fill" style={{ width: `${Math.min(100, (resolved / total) * 100)}%` }} />
+          <span className="triage-progress-fill" style={{ width: `${(walked / total) * 100}%` }} />
         </div>
       )}
 
