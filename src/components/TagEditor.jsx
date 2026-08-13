@@ -43,7 +43,27 @@ export default function TagEditor({ item, allTags, onAdd, onRemove, onClose }) {
     inputRef.current?.focus();
   }
 
+  // The last tag and the way out, in one keystroke. Typing a tag and pressing
+  // Enter leaves the caret in the field on purpose — most tagging is two or
+  // three in a row — but that makes the end of the job the one part you have to
+  // reach for the mouse or hunt for Escape to finish. ⌘↵ takes whatever is in
+  // hand (a highlighted suggestion, or what you typed) and closes behind it.
+  // Ctrl is the same key on a keyboard without a ⌘.
+  function finish(e) {
+    e.preventDefault();
+    // Same reasoning as Escape below: this keystroke was for the tag bar and
+    // ends here rather than reaching the window with the input already gone.
+    e.stopPropagation();
+    // Not via commit() — that puts the caret back in a field that's closing.
+    if (hi >= 0 && sugg[hi]) onAdd(item.id, sugg[hi]);
+    else if (val.trim()) onAdd(item.id, val);
+    onClose();
+  }
+
   function onKeyDown(e) {
+    // Ahead of the plain-Enter branch, which would otherwise swallow it and
+    // commit without closing.
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { finish(e); return; }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       if (sugg.length) setHi((h) => (h + 1) % sugg.length);
@@ -103,7 +123,12 @@ export default function TagEditor({ item, allTags, onAdd, onRemove, onClose }) {
           ))}
         </div>
       </div>
-      <button className="tb-done" onClick={onClose}>Done</button>
+      {/* The button says what the keystroke does, so the shortcut is learnable
+          from the bar itself rather than from a help modal. Both do the same
+          thing, down to taking a half-typed tag with them. */}
+      <button className="tb-done" onClick={(e) => finish(e)} title="Add and close (⌘↵)">
+        Done <kbd className="tb-kbd">⌘↵</kbd>
+      </button>
     </div>
   );
 }
